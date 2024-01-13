@@ -1,8 +1,10 @@
-{
-  "title": "Test post from GitHub",
-  "body": "Этот пост взят из репозитория гитхаба в котором будет размещаться исходный код этого приложения",
-  "link": {
-    "url": "https://github.com/ost056/SteamAuthTool",
-    "title": "Открыть"
+[
+  {
+    "title": "Test post from GitHub",
+    "body": "Этот пост взят из репозитория гитхаба в котором будет размещаться исходный код этого приложения",
+    "link": {
+      "url": "https://github.com/ost056/SteamAuthTool",
+      "title": "Открыть"
+    }
   }
-}
+]
