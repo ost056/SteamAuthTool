@@ -10,11 +10,7 @@ const APP_INFO = {
 
 
 const path = require('path')
-const { Notification } = require('electron')
 const master = require("./components/master");
-
-const NOTIFICATION_TITLE = 'Basic Notification'
-const NOTIFICATION_BODY = 'Notification from the Main process'
 const PARTITION = "node-sda:main";
 
 const transport = Transport("node-sda", {
@@ -40,11 +36,8 @@ const createWindow = async () => {
         icon: "./logo.ico"
     })
     win.hide()
-
-    //win.loadURL("http://localhost:8080/")
     await win.loadFile("./GUI/index.html")
     win.show();
-    //win.webContents.openDevTools()
     WINDOW = win
 
     win.on('window-all-closed', () => {
@@ -55,7 +48,6 @@ const createWindow = async () => {
 Promise.all([app.whenReady(), master.init()]).then(() => {
     initTransport()
     createWindow()
-    //shell.openExternal("https://vk.com/", {activate: false})
 })
 
 function initTransport(){
@@ -88,9 +80,7 @@ function initTransport(){
     })
 
     transport.set("/cont-import", async (data, res)=>{
-        console.log(data)
         const result = await master.import(data.path, data.skip_dubl)
-        console.log(result);
         return res.json(result)
     })
 
@@ -135,14 +125,6 @@ function initTransport(){
     transport.set('/get-config', async (data, res)=>{
         const result = master.get_config(data);
         return res.json(result);
-        if (data.id) return res.json({
-            auto_confirm: true,
-            proxy: ""
-        })
-        else return res.json({
-            auto_confirm: true,
-            confirm_interval: 33
-        })
     })
 
     transport.set('/set-config', async (data, res)=>{
@@ -181,8 +163,3 @@ function initTransport(){
     })
     transport.init();
 }
-
-
-/*
-    Снимать метки с подтверждений при обновлении
-*/
