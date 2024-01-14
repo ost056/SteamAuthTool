@@ -5,7 +5,7 @@ A desktop application that replicates the functionality of the Steam mobile appl
 
 ![image](https://github.com/ost056/SteamAuthTool/assets/74778295/aad2601b-9684-4969-915b-11b60ebbc865)
 
-1. Download latest version from <a href="https://github.com/ost056/SteamAuthTool/releases">release page</a> and unzip it
+1. Download latest version from <a href="https://github.com/ost056/SteamAuthTool/releases" target="_blank">release page</a> and unzip it
 2. Just run <code>Steam Auth Tool.exe</code>
 
 
