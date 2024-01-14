@@ -1,0 +1,44 @@
+{
+  "name": "steam-auth-tool",
+  "version": "0.1.0",
+  "description": "Steam Auth Tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "author": "ost56",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.2.0",
+    "@electron-forge/maker-deb": "^7.2.0",
+    "@electron-forge/maker-rpm": "^7.2.0",
+    "@electron-forge/maker-squirrel": "^7.2.0",
+    "@electron-forge/maker-zip": "^7.2.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.2.0",
+    "electron": "^25.1.1"
+  },
+  "dependencies": {
+    "axios": "^1.5.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "hpagent": "^1.2.0",
+    "jsqr": "^1.4.0",
+    "request": "^2.88.2",
+    "steam-session": "^1.7.1",
+    "steam-totp": "^2.1.2",
+    "steamcommunity": "^3.46.1",
+    "steamstore": "^2.3.0"
+  },
+  "build": {
+    "mac": {
+      "icon": "logo.ico"
+    },
+    "win": {
+      "icon": "logo.ico"
+    },
+    "linux": {
+      "icon": "logo.ico"
+    }
+  }
+}
