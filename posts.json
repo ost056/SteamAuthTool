@@ -1,4 +1,13 @@
 [
+     {
+        "id": 3,
+        "title": "Обновление! Steam Auth Tool v0.3 beta",
+        "body": "Исправление критических ошибок\n\n Если вы уже скачали версию 0.2 обязательно скачайте обновление",
+        "link": {
+            "url": "https://github.com/ost056/SteamAuthTool/releases/tag/v0.3-beta",
+            "title": "Скачать"
+        }
+    },
     {
         "id": 2,
         "title": "Обновление! Steam Auth Tool v0.2 beta",
