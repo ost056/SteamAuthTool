@@ -1,6 +1,6 @@
 {
   "name": "steam-auth-tool",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Steam Auth Tool",
   "main": "main.js",
   "scripts": {

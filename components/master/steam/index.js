@@ -82,6 +82,10 @@ module.exports = class Account extends Events{
         }
     }
 
+    set device_id(val){
+        return
+    }
+
     set proxy(val){
         this._proxy.stop();
         this._proxy = new Proxy(val);

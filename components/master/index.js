@@ -16,7 +16,12 @@ class Master{
         const result = []
         try{
             const dir = await fs.readdir(this.data_dir, {encoding: "utf-8"})
-            for (const name of dir){
+            const latest_dir = dir.filter(val=> val.includes(".maFile"));
+            dir.forEach(item=>{
+                if (latest_dir.includes(item) || latest_dir.includes(`${item}.maFile`)) return;
+                latest_dir.push(item)
+            })
+            for (const name of latest_dir){
                 const res = await this.load_account(name);
                 result.push(res);
             }

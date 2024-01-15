@@ -4,7 +4,7 @@ const Transport = require("./components/transport");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v0.2 beta",
+    version: "v0.3 beta",
     short_title: "SAT"
 }
 
