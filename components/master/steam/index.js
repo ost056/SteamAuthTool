@@ -16,7 +16,6 @@ module.exports = class Account extends Events{
 		"revocation_code": "",
 		"uri": "",
 		"server_time": "",
-		"account_name": "",
 		"token_gid": "",
 		"identity_secret": "",
 		"secret_1": "",
@@ -35,6 +34,8 @@ module.exports = class Account extends Events{
     cookies = [];
     _auto_confirm = false;
     number = "";
+    tags = [];
+    isMaf = false;
 
     _session = null;
     _time_offset = 0;
@@ -55,12 +56,14 @@ module.exports = class Account extends Events{
         this.proxy = obj?.proxy ?? null;
 
         if (type == 0){
+            if (obj.hasOwnProperty("Session")) this.isMaf = true;
             for (let key in obj){
-                if (key == '2fa') continue;
+                if (key == '2fa' || this.two_fa.hasOwnProperty(key) || key == "Session") continue;
                 if (obj[key]) this[key] = obj[key];
             }
             for (let key in this.two_fa){
-                if (obj['2fa'][key]) this.two_fa[key] = obj['2fa'][key]
+                if (obj['2fa'] && obj['2fa'][key]) this.two_fa[key] = obj['2fa'][key]
+                if (obj[key]) this.two_fa[key] = obj[key];
             }
             this.reneval_refresh_token()
         }
@@ -342,16 +345,22 @@ module.exports = class Account extends Events{
     }
 
     object4save(){
+        this.isMaf = true;
         return {
+            ...this.two_fa,
             steamID: this.steamID,
             account_name: this.account_name,
-            '2fa': this.two_fa,
             access_token: this.access_token,
             auto_confirm: this.auto_confirm,
             refresh_token: this.refresh_token,
+            device_id: this.device_id,
             cookies: this.cookies,
             number: this.number,
-            proxy: this.proxy.full
+            proxy: this.proxy.full,
+            tags: this.tags,
+            Session: {
+                SteamID: this.steamID
+            }
         }
     }
 }

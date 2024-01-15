@@ -8,6 +8,13 @@ Object.defineProperty(Account.prototype, "auth_code", {
     }
 })
 
+Object.defineProperty(Account.prototype, "device_id", {
+    get(){
+        if (!this.steamID) return null;
+        else return SteamTotp.getDeviceID(this.steamID)
+    }
+})
+
 Account.prototype.load_confirmations = function(){
     if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
     return new Promise(res=>{

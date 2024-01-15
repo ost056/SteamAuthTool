@@ -45,9 +45,10 @@ class Master{
     async save_account(id){
         if (!this.accounts[id]) return {success: false, error: "Account not found"}
 
-        const data = JSON.stringify(this.accounts[id].object4save(), null, "\t");
+        const obj = this.accounts[id].object4save()
+        const data = JSON.stringify(obj, null, "\t");
         try{
-            const f_path = path.join(this.data_dir, id)
+            const f_path = path.join(this.data_dir, id+".maFile")
             await fs.writeFile(f_path, data, {encoding: "utf-8"});
             return {success: true}
         }catch(error){
@@ -96,7 +97,7 @@ class Master{
         }
         return result;
     }
-    async import_login(login, password, proxy = null){
+    async import_login(login, password, proxy = null, tags = []){
         if (!this.import_accounts.hasOwnProperty(login)) return {success: false, error: "Not imported"}
 
         const maData = this.import_accounts[login];
@@ -105,6 +106,7 @@ class Master{
         if (result.success){
             if (result.status == 1){
                 this.accounts[account.steamID] = account;
+                this.accounts[account.steamID].tags = tags;
                 this.accounts[account.steamID].on("update", ()=>{
                     this.save_account(account.steamID)
                 })
@@ -187,6 +189,7 @@ class Master{
             if (result.success){
                 const steamID = this.new_account.steamID;
                 this.accounts[steamID] = new Account(this.new_account.object4save());
+                this.accounts[steamID].tags = data.tags;
                 this.accounts[steamID].on("update", ()=>{
                     this.save_account(steamID)
                 })
@@ -201,7 +204,8 @@ class Master{
         if (data.id){
             return {
                 auto_confirm: this.accounts[data.id].auto_confirm,
-                proxy: this.accounts[data.id].proxy.full
+                proxy: this.accounts[data.id].proxy.full,
+                tags: this.accounts[data.id].tags
             }
         }else {
             let auto_confirm = false;
@@ -223,6 +227,7 @@ class Master{
         if (!data.id || !this.accounts.hasOwnProperty(data.id)) return {success: false, error: "Bad ID account"};
         this.accounts[data.id].auto_confirm = data.auto_confirm;
         this.accounts[data.id].proxy = data.proxy;
+        this.accounts[data.id].tags = data.tags;
         this.save_account(data.id)
         return {success: true}
     }
@@ -236,6 +241,21 @@ class Master{
         if (!this.accounts[id]) return {success: false, error: "Account not found"};
         this.accounts[id].auto_confirm = enable;
         this.save_account(id)
+    }
+
+    async remove_account(id){
+        if (!this.accounts.hasOwnProperty(id)) return {success: false, error: "Account not found"};
+        this.accounts[id].auto_confirm = false;
+        const add_maf = this.accounts[id].isMaf ? ".maFile" : ""
+        try{
+            const f_path = path.join(this.data_dir, id+add_maf)
+            await fs.rm(f_path);
+            delete this.accounts[id];
+            return {success: true}
+        }catch(error){
+            console.log(error)
+            return {success: false, error: error.message}
+        }
     }
 }
 

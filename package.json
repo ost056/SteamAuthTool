@@ -1,10 +1,10 @@
 {
   "name": "steam-auth-tool",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Steam Auth Tool",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "electron .",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },

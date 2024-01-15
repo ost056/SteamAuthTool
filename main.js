@@ -4,9 +4,11 @@ const Transport = require("./components/transport");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v0.1 beta",
+    version: "v0.2 beta",
     short_title: "SAT"
 }
+
+const DEV = false;
 
 
 const path = require('path')
@@ -36,7 +38,10 @@ const createWindow = async () => {
         icon: "./logo.ico"
     })
     win.hide()
-    await win.loadFile("./GUI/index.html")
+    if (DEV){
+        await win.loadURL("http://localhost:8080")
+        win.webContents.openDevTools()
+    }else await win.loadFile("./GUI/index.html")
     win.show();
     WINDOW = win
 
@@ -85,8 +90,7 @@ function initTransport(){
     })
 
     transport.set("/import-login", async (data, res)=>{
-        const result = await master.import_login(data.login, data.password, data.proxy);
-        console.log(result);
+        const result = await master.import_login(data.login, data.password, data.proxy, data.tags);
         return res.json(result);
     })
 
@@ -144,22 +148,33 @@ function initTransport(){
 
     transport.set("/getlist", (data, res)=>{
         const accounts = []
+        const tags = [];
         for (let id in master.accounts){
+            master.accounts[id].tags.forEach(tag=>{
+                if (!tag) return
+                if (!tags.includes(tag)) tags.push(tag)
+            })
             accounts.push({
                 id, 
                 login: master.accounts[id].account_name, 
                 proxy: master.accounts[id].proxy.toString(), 
                 proxy_status: master.accounts[id].proxy.status, 
                 auto_conf: master.accounts[id].auto_confirm,
-                token_valid: !!master.accounts[id].refresh_token
+                token_valid: !!master.accounts[id].refresh_token,
+                tags: master.accounts[id].tags
             })
         }
-        return res.json(accounts)
+        return res.json({accounts, tags})
     })
 
     transport.set("/check-proxy", async (data, res)=>{
         const result = await master.check_proxy(data.proxy);
         return res.json(result)
+    })
+
+    transport.set("/remove-account", (data, res)=>{
+        master.remove_account(data.id)
+        return res.json({})
     })
     transport.init();
 }
