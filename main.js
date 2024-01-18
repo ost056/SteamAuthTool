@@ -4,7 +4,7 @@ const Transport = require("./components/transport");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v0.3 beta",
+    version: "v0.4 beta",
     short_title: "SAT"
 }
 
@@ -21,7 +21,7 @@ const transport = Transport("node-sda", {
     supportFetchAPI: true
 }, PARTITION)
 
-let WINDOW = null
+let mainWindow = null
 
 
 const createWindow = async () => {
@@ -29,51 +29,67 @@ const createWindow = async () => {
         width: 800,
         height: 630,
         webPreferences: {
-            preload: path.join(__dirname, 'preloader.js'),
             partition: PARTITION
         },
         resizable: false,
         fullscreenable: false,
         frame: false,
-        icon: "./logo.ico"
+        icon: path.join(__dirname,"logo.ico"),
+        show: false
     })
-    win.hide()
+    win.once("ready-to-show", ()=>{
+        win.show();
+    })
     if (DEV){
         await win.loadURL("http://localhost:8080")
         win.webContents.openDevTools()
     }else await win.loadFile("./GUI/index.html")
-    win.show();
-    WINDOW = win
 
     win.on('window-all-closed', () => {
         if (process.platform !== 'darwin') app.quit()
     })
+
+    return win
 }
 
-Promise.all([app.whenReady(), master.init()]).then(() => {
+Promise.all([app.whenReady(), master.init()]).then(async () => {
     initTransport()
-    createWindow()
+    mainWindow = await createWindow();
 })
 
 function initTransport(){
     transport.set("/app", (data, res)=>{
-        return res.json(APP_INFO)
+        return res.json({...APP_INFO, crypted: !!master.crypted_files.length})
     })
 
     transport.set("/close", (data, res)=>{
-        WINDOW.close();
-        WINDOW.destroy();
+        mainWindow.close();
+        mainWindow.destroy();
         return res.json({})
     })
 
     transport.set("/minimize", (data, res)=>{
-        WINDOW.minimize()
+        mainWindow.minimize()
         return res.json({})
     })
 
     transport.set("/open-url", (data, res)=>{
         shell.openExternal(data.url);
         return res.json({});
+    })
+
+    transport.set("/send-password", async (data, res)=>{
+        const result = await master.set_crypto_password(data.password)
+        return res.json(result);
+    })
+
+    transport.set("/crypto-enable", async (data, res)=>{
+        const result = await master.enable_crypto(data)
+        return res.json(result);
+    })
+
+    transport.set("/crypto-status", async(data, res)=>{
+        return res.json(master.crypto_status());
     })
 
     transport.set("/import", async (data, res)=>{
@@ -117,6 +133,11 @@ function initTransport(){
 
     transport.set("/respond-confirmations", async (data, res)=>{
         const result = await master.respond_confirmations(data);
+        return res.json(result)
+    })
+
+    transport.set("/confirmation-info", async (data, res)=>{
+        const result = await master.confirmation_info(data)
         return res.json(result)
     })
 

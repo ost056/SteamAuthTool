@@ -1,5 +1,6 @@
 const Account = require("./index");
 const SteamTotp = require("steam-totp");
+const Cheerio = require('cheerio');
 
 Object.defineProperty(Account.prototype, "auth_code", {
     get(){
@@ -29,6 +30,64 @@ Account.prototype.load_confirmations = function(){
             }
         })
     })
+}
+
+Account.prototype.load_confirmation_info = function(id){
+    if (!id) return {success: false, error: "Confirmation id is broken"}
+    const confirmation = this.confirmations.find(val=> val.id == id);
+    if (!confirmation) return {success: false, error: "Confirmation not found"}
+    const time = Math.floor(Date.now()/1000);
+    const tag = "detail"
+    const key = SteamTotp.getConfirmationKey(this.two_fa.identity_secret, time, tag);
+    return new Promise(res=>{
+        const req_options = {
+            uri: "https://steamcommunity.com/mobileconf/detailspage/" +id,
+            method: "GET",
+            qs: {
+                p: this.device_id,
+                a: this.steamID,
+                k: key,
+                t: time,
+                m: 'react',
+                tag: tag
+            }
+        }
+        this.community.httpRequest(req_options, (error, resp, body)=>{
+            if (error) res({success: false, error: error.message})
+            else if (typeof body != "string") res({success: false, error: "Cannot load confirmation details"})
+            else {
+                const $ = Cheerio.load(body)
+                const offer = $('.tradeoffer');
+                if(offer.length < 1) res({success: true, data: null})
+                const offer_id = offer.attr('id').split('_')[1]
+                const prim = offer.find(".primary");
+                const second = offer.find(".secondary");
+                const data = {
+                    offer_id,
+                    primary: get_items_info(prim),
+                    secondary: get_items_info(second)
+                }
+                res({success: true, data})
+            }
+        })
+    })
+
+
+    function get_items_info(element){
+        const result = {
+            avatar: element.find(".tradeoffer_items_avatar_ctn").find("img").attr("src"),
+            items: []
+        }
+        const items = element.find(".trade_item");
+        for (let i=0;i < items.length; i++){
+            const item = Cheerio.load(items[i])("*")
+            const id = item.attr("data-economy-item");
+            const img = item.find("img").attr("src")
+            if (!id && !img) continue;
+            result.items.push({id, img})
+        }
+        return result
+    }
 }
 
 Account.prototype.respond_confirmations = function(ids, action = true){

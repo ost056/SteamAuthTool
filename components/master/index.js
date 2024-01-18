@@ -3,25 +3,33 @@ const Proxy = require("./steam/proxy");
 const fs = require("fs").promises;
 const path = require("path");
 const jsQR = require('jsqr');
+const ROOT_DIR = process.cwd();
+const {createCipheriv, createDecipheriv, scrypt} = require("crypto");
+const iv = Buffer.from("737465616d2d617574682d746f6f6c5f", "hex");
 
 class Master{
-    data_dir = path.join(process.cwd(), "data");
+    data_dir = path.join(ROOT_DIR, "data");
     accounts = {};
     accounts_name = {};
     import_accounts = {};
     proxy = {};
     new_account = null;
+    crypto_enable = false;
+    crypto_key = null;
+    crypted_files = []
 
     async init(){
         const result = []
         try{
             const dir = await fs.readdir(this.data_dir, {encoding: "utf-8"})
-            const latest_dir = dir.filter(val=> val.includes(".maFile"));
-            dir.forEach(item=>{
-                if (latest_dir.includes(item) || latest_dir.includes(`${item}.maFile`)) return;
-                latest_dir.push(item)
+            const noMaf = dir.filter(val=> !val.includes(".maFile"));
+            const files = dir.filter(val => val.includes(".maFile"))
+            noMaf.forEach(item=>{
+                if (files.includes(`${item}.maFile`)) fs.rm(path.join(this.data_dir, item))
+                else files.push(item)
             })
-            for (const name of latest_dir){
+
+            for (const name of files){
                 const res = await this.load_account(name);
                 result.push(res);
             }
@@ -32,19 +40,121 @@ class Master{
         return result;
     }
 
+    file_is_crypted(file){
+        try{
+            const data = JSON.parse(file);
+            return {crypted: false, valid: true, data}
+        }catch(error){}
+
+        try{
+            const from_hex = Buffer.from(file, "base64").toString("utf-8");
+            const valid = from_hex.includes(".SteamAuthTool")
+            if (!valid) return {crypted: false, valid}
+            const data = from_hex.replace(".SteamAuthTool", "")
+            return {crypted: true, valid, data}
+        }catch(error){
+            return {crypted: false, valid: false}
+        }
+    }
+
+    _encrypt(data){
+        if (!this.crypto_key) return {success: false, error: "Empty password"}
+        try{
+            const cipher = createCipheriv('aes-192-cbc', this.crypto_key, iv);
+            let encrypted = cipher.update(data, 'utf-8', 'hex');
+            encrypted += cipher.final('hex');
+            return {success: true, data: encrypted};
+        }catch(error){
+            return {success: false, error: error.message, data: ""}
+        }
+    }
+
+    _decrypt(data, key = null){
+        if (!this.crypto_key && !key) return {success: false, error: "Empty password"};
+        try{
+            const decipher = createDecipheriv('aes-192-cbc', this.crypto_key || key, iv);
+            let decrypted = decipher.update(data, 'hex', 'utf-8');
+            decrypted += decipher.final('utf-8');
+            return {success: true, data: decrypted};
+        }catch(error){
+            return {success: false, error: error.message}
+        }
+    }
+
+    async set_crypto_password(password){
+        if (!password) return {success: false, error: "Empty password"}
+
+        const key = await new Promise(res => {
+            scrypt(password, 'salt', 24, (err, key) => {
+                if (err) return res(null)
+                res(key)
+            })
+        });
+
+        if (this.crypted_files.length && key){
+            const res = this._decrypt(this.crypted_files[0], key);
+            if (res.success){
+                this.crypto_key = key
+                this.crypted_files.forEach(item=>{
+                    const decrypt = this._decrypt(item)
+                    if (decrypt.success) this.init_account(decrypt.data, false);
+                })
+                this.crypted_files = []
+                return {success: true}
+            }else return {success: false, error: "Wrong password"}
+        }else if (key){
+            this.crypto_enable = true;
+            this.crypto_key = key;
+            for (let id in this.accounts){
+                this.save_account(id)
+            }
+            return {success: true}
+        }else return {success: false, error: "Failed to set password. Try another one"}
+    }
+
+    async enable_crypto({enable, password = ""}){
+        if (!enable){
+            if (this.crypto_enable){
+                this.crypto_enable = false;
+                this.crypto_key = null;
+                for (let id in this.accounts){
+                    await this.save_account(id)
+                }
+            }
+            return {success: true}
+        }else if (!password){
+            if (this.crypto_key) return {success: true}
+            return {success: false, error: "Password is empty"}
+        } 
+        
+        return this.set_crypto_password(password);
+    }
+
     async load_account(id){
         try{
             const file = await fs.readFile(path.join(this.data_dir, id), {encoding: "utf-8"});
-            const account = JSON.parse(file);
-            this.accounts[account.steamID] = new Account(account);
-            this.accounts[account.steamID].on("update", ()=>{
-                this.save_account(account.steamID)
-            })
-            this.accounts_name[account.account_name] = 1;
+            const {valid, crypted, data} = this.file_is_crypted(file)
+
+            if (!valid) return {success: false, error: `File ${id} is invalid!`, id}
+
+            if (!crypted) this.init_account(data);
+            else{
+                this.crypto_enable = true;
+                this.crypted_files.push(data);
+            }
             return {success: true, id}
         }catch(error){
             return {success: false, error: error.message, id}
         }
+    }
+
+    init_account(account,  isJson = true){
+        const _account = isJson ? account : JSON.parse(account)
+        this.accounts[_account.steamID] = new Account(_account);
+        this.accounts[_account.steamID].on("update", ()=>{
+            this.save_account(_account.steamID)
+        })
+        this.accounts_name[_account.account_name] = 1;
     }
 
     async save_account(id){
@@ -53,8 +163,11 @@ class Master{
         const obj = this.accounts[id].object4save()
         const data = JSON.stringify(obj, null, "\t");
         try{
+            const crypto_file = this.crypto_enable && this.crypto_key ? this._encrypt(data).data : "";
+            const base64_file = crypto_file ? Buffer.from(crypto_file+".SteamAuthTool", "utf-8").toString("base64") : ""
+            const file = base64_file ? base64_file : data;
             const f_path = path.join(this.data_dir, id+".maFile")
-            await fs.writeFile(f_path, data, {encoding: "utf-8"});
+            await fs.writeFile(f_path, file, {encoding: "utf-8"});
             return {success: true}
         }catch(error){
             console.log(error)
@@ -176,6 +289,11 @@ class Master{
         else return {success: true, confirmations: this.accounts[id].confirmations}
     }
 
+    confirmation_info({id, confirmation_id}){
+        if (!this.accounts[id]) return {success: false, error: "Account not found"}
+        return this.accounts[id].load_confirmation_info(confirmation_id)
+    }
+
     async add_new(data){
         console.log(data)
         const {stage} = data;
@@ -205,6 +323,13 @@ class Master{
         }
     }
 
+    crypto_status(){
+        return {
+            encrypt_enable: this.crypto_enable,
+            password_is_set: !!this.crypto_key
+        }
+    }
+
     get_config(data){
         if (data.id){
             return {
@@ -213,16 +338,8 @@ class Master{
                 tags: this.accounts[data.id].tags
             }
         }else {
-            let auto_confirm = false;
-            for (let id in this.accounts){
-                if (this.accounts[id].auto_confirm){
-                    auto_confirm = true
-                    break
-                } 
-            }
             return {
-                auto_confirm,
-                confirm_interval: 30
+                encrypt_enable: this.crypto_enable
             }
         }
         return {}
