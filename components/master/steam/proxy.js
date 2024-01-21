@@ -34,7 +34,7 @@ class Proxy{
         return this.full.hostname;
     }
     get proxy(){
-        if (!this.full) return null;
+        if (!this.full) return "";
         return this.full.href
     }
     get http_agent(){

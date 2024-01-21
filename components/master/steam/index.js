@@ -89,14 +89,15 @@ module.exports = class Account extends Events{
     set proxy(val){
         this._proxy.stop();
         this._proxy = new Proxy(val);
+        const proxy = this._proxy.proxy ? this._proxy.proxy : null;
         if (this._community){
             this._community.request = this._community.request.defaults({
-                proxy: this.proxy.proxy
+                proxy
             })
         }
         if (this._steam_store){
             this._steam_store.request = this._steam_store.request.defaults({
-                proxy: this.proxy.proxy
+                proxy
             })
         }
     }
