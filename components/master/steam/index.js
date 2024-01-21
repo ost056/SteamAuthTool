@@ -89,6 +89,16 @@ module.exports = class Account extends Events{
     set proxy(val){
         this._proxy.stop();
         this._proxy = new Proxy(val);
+        if (this._community){
+            this._community.request = this._community.request.defaults({
+                proxy: this.proxy.proxy
+            })
+        }
+        if (this._steam_store){
+            this._steam_store.request = this._steam_store.request.defaults({
+                proxy: this.proxy.proxy
+            })
+        }
     }
 
     get proxy(){
@@ -242,6 +252,10 @@ module.exports = class Account extends Events{
 
         try{
             this.cookies = await this._session.getWebCookies()
+            if (this.cookies.length){
+                if (this._steam_store) this._steam_store.setCookies(this.cookies)
+                if (this._community) this._community.setCookies(this.cookies)
+            }
             if (!this.access_token) this.access_token = this._session.accessToken;
 
             this._session = null;
