@@ -31,7 +31,7 @@ A desktop application that replicates the functionality of the Steam mobile appl
 </div>
 
 1. Open Steam login page
-2. Press PrintScreen or Win+Shift+S and take a screenshot of the QR-code
+2. Press <code>PrintScreen</code> or <code>Win</code>+<code>Shift</code>+<code>S</code> and take a screenshot of the QR-code
 3. Press 'QR' button on choosen account page
 4. Await... Done
 
