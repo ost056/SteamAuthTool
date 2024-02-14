@@ -10,7 +10,7 @@ const iv = Buffer.from("737465616d2d617574682d746f6f6c5f", "hex");
 class Master{
     data_dir = path.join(ROOT_DIR, "data");
     accounts = {};
-    accounts_name = {};
+    accounts_name = new Set();
     import_accounts = {};
     proxy = {};
     new_account = null;
@@ -154,7 +154,7 @@ class Master{
         this.accounts[_account.steamID].on("update", ()=>{
             this.save_account(_account.steamID)
         })
-        this.accounts_name[_account.account_name] = 1;
+        this.accounts_name.add(_account.account_name)
     }
 
     async save_account(id){
@@ -198,7 +198,7 @@ class Master{
                 return {success: false, error: "Invalid maFile. The file is encrypted or damaged", file_name: dir.base}
             }
 
-            if (skip_dupl && this.accounts_name[account.account_name]) return
+            if (skip_dupl && this.accounts_name.has(account.account_name)) return 0
             this.import_accounts[account.account_name] = account;
             return {success: true, login: account.account_name, file_name: dir.base}
         }
@@ -208,11 +208,8 @@ class Master{
         for(let i=0;i<_path.length; i++){
             const res = await read_file(_path[i]);
             if (res) result.push(res)
-            // else{
-            //     const dir = path.parse(_path[i]);
-            //     result.push({success: false, error: "Duplicate", file_name: dir.base})
-            // }
         }
+
         return result;
     }
     async import_login(login, password, proxy = null, tags = []){
@@ -223,12 +220,14 @@ class Master{
         const result = await account.login(password)
         if (result.success){
             if (result.status == 1){
+                if (this.accounts.hasOwnProperty(account.steamID)) this.accounts[account.steamID].stop()
+
                 this.accounts[account.steamID] = account;
                 this.accounts[account.steamID].tags = tags;
                 this.accounts[account.steamID].on("update", ()=>{
                     this.save_account(account.steamID)
                 })
-                this.accounts_name[account.account_name] = 1;
+                this.accounts_name.add(account.account_name)
                 this.save_account(account.steamID)
                 return result;
             }else return {success: false, error: "Guard disconnected"}
@@ -295,12 +294,43 @@ class Master{
     }
 
     async add_new(data){
-        console.log(data)
+        const finish = ()=>{
+            const steamID = this.new_account.steamID;
+
+            if (this.accounts.hasOwnProperty(steamID)) this.accounts[steamID].stop()
+
+            this.accounts[steamID] = new Account(this.new_account.object4save());
+            this.accounts[steamID].tags = data.tags;
+            this.accounts[steamID].on("update", ()=>{
+                this.save_account(steamID)
+            })
+
+            this.accounts_name.add(this.new_account.account_name)
+
+            this.new_account = null;
+            this.save_account(steamID);
+            return {success: true}
+        }
+
+
         const {stage} = data;
+
         if (stage == 1){
+            if (this.accounts_name.has(data.login)) return {success: false, error: "This account has already been added. Remove it and try again"}
+
             this.new_account = new Account(data, 2);
             return this.new_account.login(data.password);
-        }else if (stage == 1.1) return this.new_account.set_guard_code(data.code);
+        }
+        else if (stage == 1.1) return this.new_account.set_guard_code(data.code);
+        else if (stage == 1.2) return this.new_account.moveTwoFactorStart();
+        else if (stage == 1.3){
+            const result = await this.new_account.moveTwoFactorFinish(data.code);
+            if (result.success){
+                await this.new_account.set_guard_code(this.new_account.auth_code);
+                finish()
+            }
+            return result;
+        } 
         else if(stage == 2) return this.new_account.has_phone()
         else if(stage == 2.1) return this.new_account.add_phone_number(data.number);
         else if (stage == 2.2) return this.new_account.send_sms();
@@ -309,17 +339,8 @@ class Master{
         else if (stage == 3) return this.new_account.activate_2fa();
         else if (stage == 3.1){
             const result = await this.new_account.finalize_2fa(data.code);
-            if (result.success){
-                const steamID = this.new_account.steamID;
-                this.accounts[steamID] = new Account(this.new_account.object4save());
-                this.accounts[steamID].tags = data.tags;
-                this.accounts[steamID].on("update", ()=>{
-                    this.save_account(steamID)
-                })
-                this.new_account = null;
-                this.save_account(steamID);
-                return {success: true}
-            }else return result;
+            if (!result.success) return result;
+            return finish();
         }
     }
 
@@ -372,7 +393,11 @@ class Master{
         try{
             const f_path = path.join(this.data_dir, id+add_maf)
             await fs.rm(f_path);
+
+            this.accounts_name.delete(this.accounts[id].account_name)
+            this.accounts[id].stop();
             delete this.accounts[id];
+
             return {success: true}
         }catch(error){
             console.log(error)

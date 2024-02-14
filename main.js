@@ -4,7 +4,7 @@ const Transport = require("./components/transport");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v1.0",
+    version: "v1.1",
     short_title: "SAT"
 }
 
@@ -93,7 +93,7 @@ function initTransport(){
     })
 
     transport.set("/import", async (data, res)=>{
-        const dir = await dialog.showOpenDialog({title: "test", properties: ['multiSelections']}).catch();
+        const dir = await dialog.showOpenDialog({title: "Select account files", properties: ['multiSelections']}).catch();
         if (dir.filePaths.length){
             return res.json({path: dir.filePaths});
         } 
@@ -101,7 +101,7 @@ function initTransport(){
     })
 
     transport.set("/cont-import", async (data, res)=>{
-        const result = await master.import(data.path, data.skip_dubl)
+        const result = await master.import(data.path, data.skip_dupl)
         return res.json(result)
     })
 

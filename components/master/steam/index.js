@@ -4,7 +4,10 @@ const SteamSession = require("steam-session");
 const SteamStore = require("steamstore");
 const request = require("request");
 const Proxy = require("./proxy");
-const Events = require("events")
+const Events = require("events");
+const Protobuf = require("./proto");
+
+const EResult = SteamSession.EResult;
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
@@ -31,6 +34,9 @@ module.exports = class Account extends Events{
         token: "",
         exp: null
     };
+
+    _weak_token = ""
+
     cookies = [];
     _auto_confirm = false;
     number = "";
@@ -50,6 +56,8 @@ module.exports = class Account extends Events{
     _steam_store = null;
 
     confirmations = [];
+
+    __reneval_refresh_timeout = null
 
     constructor(obj, type = 0){
         super()
@@ -194,9 +202,11 @@ module.exports = class Account extends Events{
             if (code) options.steamGuardCode = code
             
             const result = await this._session.startWithCredentials(options);
+
             this.steamID = this._session.steamID.toString();
             this.__process_session_events();
             if (result.actionRequired){
+                this._weak_token = this._session._startSessionResponse.weakToken
                 return {success: true, status: 2, actions: result.validActions.map(val=> EAuthSessionGuardType[val.type])}
             }
 
@@ -303,7 +313,10 @@ module.exports = class Account extends Events{
             this.emit("update")
             this._session = null;
         }catch(error){
-            console.log(error)
+            console.log(this.account_name, "renevalRefreshToken", error.message)
+            await new Promise(res=>{
+                this.__reneval_refresh_timeout = setTimeout(res, 30000)
+            })
             return this.reneval_refresh_token();
         }
     }
@@ -328,6 +341,63 @@ module.exports = class Account extends Events{
             return {success: false, error: error.message};
         }
     }
+
+    async sessionRequest(request){
+        if (!this._session) throw new Error("Session is not active")
+		// If a transport close is pending, cancel it
+		clearTimeout(this._session._handler._transportCloseTimeout);
+
+		// Right now we really only support IAuthenticationService
+
+		let {request: requestProto, response: responseProto} = getProtoForMethod(request.apiInterface, request.apiMethod);
+		if (!requestProto || !responseProto) {
+			throw new Error(`Unknown API method ${request.apiInterface}/${request.apiMethod}`);
+		}
+
+		let {headers} = this._session._handler._getPlatformData();
+		this._session._handler.emit('debug', request.apiMethod, request.data, headers);
+
+		let result = await this._session._handler._transport.sendRequest({
+			apiInterface: request.apiInterface,
+			apiMethod: request.apiMethod,
+			apiVersion: request.apiVersion,
+			requestData: requestProto.encode(request.data).finish(),
+			accessToken: request.accessToken,
+			headers
+		});
+
+		if (result.result != EResult.OK) {
+			throw eresultError(result.result, result.errorMessage);
+		}
+
+		// We need to decode the response data, if there was any
+		let responseData = result.responseData && result.responseData.length > 0 ? result.responseData : Buffer.alloc(0);
+		let decodedData = responseProto.decode(responseData);
+		return responseProto.toObject(decodedData, {longs: String});
+
+        function getProtoForMethod(apiInterface, apiMethod){
+            let signature = [apiInterface, apiMethod].join('_');
+            let protoDefinitionName = `C${signature}`;
+        
+            let requestDefinitionName = `${protoDefinitionName}_Request`;
+            let responseDefinitionName = `${protoDefinitionName}_Response`;
+        
+            let request = Protobuf[requestDefinitionName];
+            let response = Protobuf[responseDefinitionName];
+        
+            return {request, response};
+        }
+
+        function eresultError(result, errorMessage){
+            let resultMsg = result.toString(); // this is the numeric value, as a string
+            resultMsg = EResult[resultMsg] || resultMsg; // this is now the string representation of the EResult value
+        
+            let err = new Error(errorMessage || resultMsg);
+            // @ts-ignore
+            err.eresult = result;
+            return err;
+        }
+	}
 
     __process_session_events(){
         this._session.on("error", error=>{
@@ -381,6 +451,11 @@ module.exports = class Account extends Events{
                 SteamID: this.steamID
             }
         }
+    }
+
+    stop(){
+        this.removeAllListeners();
+        if (this.__reneval_refresh_timeout) clearTimeout(this.__reneval_refresh_timeout)
     }
 }
 

@@ -76,3 +76,53 @@ Account.prototype.finalize_2fa = function (code){
         })
     })
 }
+
+Account.prototype.moveTwoFactorStart = async function(){
+    if (!this._weak_token) return {success: false, error: "Not Loggined"}
+
+
+    const options = {
+        apiInterface: "TwoFactor",
+        apiMethod: "RemoveAuthenticatorViaChallengeStart",
+        apiVersion: 1,
+        accessToken: this._weak_token
+    }
+
+    try{
+        await this.sessionRequest(options);
+        return {success: true}
+    }catch(error){
+        return {success: false, error: error.message}
+    }
+}
+
+Account.prototype.moveTwoFactorFinish = async function(sms_code = ""){
+    if (!this._weak_token) return {success: false, error: "Not Loggined"}
+    if (!sms_code) return {success: false, error: "SMS code is empty"}
+
+
+    const options = {
+        apiInterface: "TwoFactor",
+        apiMethod: "RemoveAuthenticatorViaChallengeContinue",
+        apiVersion: 1,
+        accessToken: this._weak_token,
+        data: {
+            sms_code,
+            generate_new_token: true
+        }
+    }
+
+    try{
+        const result = await this.sessionRequest(options);
+        if (!result.success) return result
+        this.two_fa = {
+            ...result.replacement_token,
+            shared_secret: Buffer.from(result.replacement_token.shared_secret).toString("base64"),
+            identity_secret: Buffer.from(result.replacement_token.identity_secret).toString("base64"),
+            secret_1: Buffer.from(result.replacement_token.secret_1).toString("base64"),
+        }
+        return {success: true, r_code: this.two_fa.revocation_code};
+    }catch(error){
+        return {success: false, error: error.message}
+    }
+}
