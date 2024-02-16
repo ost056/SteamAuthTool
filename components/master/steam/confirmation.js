@@ -2,6 +2,8 @@ const Account = require("./index");
 const SteamTotp = require("steam-totp");
 const Cheerio = require('cheerio');
 
+const Limiters = require("../limiters");
+
 Object.defineProperty(Account.prototype, "auth_code", {
     get(){
         if (!this.two_fa.shared_secret) return null;
@@ -16,9 +18,12 @@ Object.defineProperty(Account.prototype, "device_id", {
     }
 })
 
-Account.prototype.load_confirmations = function(){
+Account.prototype.load_confirmations = function(auto = false){
     if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
-    return new Promise(res=>{
+
+    const limiter = Limiters.get(this.proxy.ip);
+
+    return limiter.schedule({priority: auto ? 5 : 4}, ()=> new Promise(res=>{
         const time = Math.floor(Date.now()/1000);
         const key = SteamTotp.getConfirmationKey(this.two_fa.identity_secret, time, "list")
 
@@ -29,7 +34,7 @@ Account.prototype.load_confirmations = function(){
                 res({success: true, confirmations: this.confirmations})
             }
         })
-    })
+    }))
 }
 
 Account.prototype.load_confirmation_info = function(id){
@@ -114,7 +119,10 @@ Account.prototype.respond_confirmations = function(ids, action = true){
     if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
     return new Promise(res=>{
         this.community.respondToConfirmation(id, keys, time, {key, tag}, action, error=>{
-            if (error) res({success: false, error: error.message})
+            if (error){
+                console.log("respond", error)
+                res({success: false, error: error.message})
+            } 
             else{
                 this.confirmations = this.confirmations.filter(val=> !ids.includes(val.id));
                 res({success: true})
@@ -128,8 +136,9 @@ Account.prototype.auto_confirmation = async function(timeout = 30000){
     if (this.proxy.status){
         await this.update_session();
 
-        const list = await this.load_confirmations();
+        const list = await this.load_confirmations(true);
         if (!list.success){
+            console.log(this.account_name, "autoconf", list.error)
             setTimeout(()=>{
                 this.auto_confirmation();
             }, 10000)

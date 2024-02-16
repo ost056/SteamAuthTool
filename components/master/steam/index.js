@@ -95,8 +95,13 @@ module.exports = class Account extends Events{
     }
 
     set proxy(val){
+        if (val == this._proxy.full) return;
+
         this._proxy.stop();
         this._proxy = new Proxy(val);
+
+        this._clear_session();
+
         const proxy = this._proxy.proxy ? this._proxy.proxy : null;
         if (this._community){
             this._community.request = this._community.request.defaults({
@@ -158,11 +163,32 @@ module.exports = class Account extends Events{
         const options = this.proxy.proxy ? {httpProxy: this.proxy.proxy} : {};
 
         this._session = new LoginSession(EAuthTokenPlatformType.MobileApp, options)
-        this._session.loginTimeout = 30000;
+        this._session.loginTimeout = 15 * 60 * 1000;
 
         if (this.refresh_token) this._session.refreshToken = this.refresh_token;
         if (this.access_token) this._session.accessToken = this.access_token;
     }
+
+    _clear_session(){
+        if (!this._session) return
+
+        this._session.cancelLoginAttempt()
+        this._session.removeAllListeners();
+        this._session = null;
+    }
+
+    get session(){
+        if (this._session && this._session._accessTokenSetAt){
+            const timeNow = Date.now();
+            const sessionTime = this._session._accessTokenSetAt.getTime();
+            if (timeNow - sessionTime >= 8 * 60 * 1000) this._clear_session();
+        }
+
+        if (!this._session) this._init_session()
+
+        return this._session;
+    }
+
     get community(){
         if (!this._community){
             this._community = new SteamCommunity({
@@ -195,13 +221,15 @@ module.exports = class Account extends Events{
 
     async login(password, accountName = this.account_name){
         const { EAuthSessionGuardType } = SteamSession;
-        if (!this._session) this._init_session();
+
+        this._clear_session();
+
         try{
             const options = {accountName, password};
             const code = this.auth_code
             if (code) options.steamGuardCode = code
             
-            const result = await this._session.startWithCredentials(options);
+            const result = await this.session.startWithCredentials(options);
 
             this.steamID = this._session.steamID.toString();
             this.__process_session_events();
@@ -219,8 +247,14 @@ module.exports = class Account extends Events{
 
             if (this._login_status.success) return {success: true, status: 1};
             else return {success: false, error: this._login_status.error}
-        }catch(error){
-            return {success: false, error: error.message}
+        }catch(_error){
+            let error = _error.message;
+
+            if (error == "InvalidPassword") error = "Incorrect login or password";
+            if (error == "RateLimitExceeded") error = "Request limit exceeded";
+            if (error == "AccountLoginDeniedThrottle") error = "The number of attempts has been exceeded. Try later"
+
+            return {success: false, error}
         }
     }
 
@@ -259,20 +293,16 @@ module.exports = class Account extends Events{
         
         if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
 
-        if (!this._session) this._init_session();
-
         try{
-            this.cookies = await this._session.getWebCookies()
+            this.cookies = await this.session.getWebCookies()
             if (this.cookies.length){
                 if (this._steam_store) this._steam_store.setCookies(this.cookies)
                 if (this._community) this._community.setCookies(this.cookies)
             }
             if (!this.access_token) this.access_token = this._session.accessToken;
 
-            this._session = null;
             return {success: true, cookies: this.cookies, updated: true}
         }catch(error){
-            this._session = null;
             if (!repeat) return {success: false, error: error.message};
             return await this.get_cookies(repeat);
         }
@@ -281,6 +311,7 @@ module.exports = class Account extends Events{
     async refresh_access_token(repeat = true){
         if (!this.refresh_token) return {success: false, error: "Not Logged"}
         if (this.access_token) return {success: true}
+
         if (!this._session) this._init_session();
 
         try{
@@ -293,8 +324,6 @@ module.exports = class Account extends Events{
             if (repeat) await this.refresh_access_token(repeat)
             else return {success: false, error: error.message}
         }
-
-        this._session = null;
         return {success: true}
     }
 
@@ -311,9 +340,8 @@ module.exports = class Account extends Events{
             if (updated) this.refresh_token = this._session.refreshToken;
             this.access_token = this._session.accessToken;
             this.emit("update")
-            this._session = null;
         }catch(error){
-            console.log(this.account_name, "renevalRefreshToken", error.message)
+            //console.log(this.account_name, "renevalRefreshToken", error.message)
             await new Promise(res=>{
                 this.__reneval_refresh_timeout = setTimeout(res, 30000)
             })
@@ -324,7 +352,6 @@ module.exports = class Account extends Events{
     async update_session(){
         const {updated} = await this.get_cookies();
         if (updated) this.emit("update");
-        //await this.refresh_access_token();
     }
 
     async qr_auth(url){
@@ -346,8 +373,6 @@ module.exports = class Account extends Events{
         if (!this._session) throw new Error("Session is not active")
 		// If a transport close is pending, cancel it
 		clearTimeout(this._session._handler._transportCloseTimeout);
-
-		// Right now we really only support IAuthenticationService
 
 		let {request: requestProto, response: responseProto} = getProtoForMethod(request.apiInterface, request.apiMethod);
 		if (!requestProto || !responseProto) {
@@ -400,36 +425,25 @@ module.exports = class Account extends Events{
 	}
 
     __process_session_events(){
-        this._session.on("error", error=>{
-            this._session.removeAllListeners();
-            this._session = null;
-
+        const end = (_error = "")=>{
             this._login_status.wait = false;
-            this._login_status.error = error.message;
-            this._login_status.success = false;
-        })
+            this._login_status.success = !_error;
+            this._login_status.error = _error;
 
-        this._session.on("timeout", ()=>{
             this._session.removeAllListeners();
-            this._session = null;
+        }
 
-            this._login_status.wait = false;
-            this._login_status.error = 'Timeout';
-            this._login_status.success = false;
-        })
+
+        this._session.on("error", error=> end(error.message))
+
+        this._session.on("timeout", ()=> end('Timeout'))
 
         this._session.on("authenticated", async ()=>{
-            this._session.removeAllListeners();
             this.access_token = this._session.accessToken;
             this.refresh_token = this._session.refreshToken;
             this.account_name = this._session.accountName;
-
-            this._session.removeAllListeners();
             await this.get_cookies(false);
-            this._session = null;
-
-            this._login_status.wait = false;
-            this._login_status.success = true;
+            end()
         })
     }
 
@@ -455,6 +469,8 @@ module.exports = class Account extends Events{
 
     stop(){
         this.removeAllListeners();
+        this._clear_session();
+        this.proxy.stop();
         if (this.__reneval_refresh_timeout) clearTimeout(this.__reneval_refresh_timeout)
     }
 }

@@ -296,6 +296,8 @@ class Master{
     async add_new(data){
         const finish = ()=>{
             const steamID = this.new_account.steamID;
+            
+            this.new_account.stop();
 
             if (this.accounts.hasOwnProperty(steamID)) this.accounts[steamID].stop()
 
@@ -317,6 +319,8 @@ class Master{
 
         if (stage == 1){
             if (this.accounts_name.has(data.login)) return {success: false, error: "This account has already been added. Remove it and try again"}
+
+            if (this.new_account) this.new_account.stop();
 
             this.new_account = new Account(data, 2);
             return this.new_account.login(data.password);
