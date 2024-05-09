@@ -19,6 +19,7 @@ Object.defineProperty(Account.prototype, "device_id", {
 })
 
 Account.prototype.load_confirmations = function(auto = false){
+    console.log("load cconf")
     if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
 
     const limiter = Limiters.get(this.proxy.ip);

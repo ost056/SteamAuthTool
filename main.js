@@ -4,7 +4,7 @@ const Transport = require("./components/transport");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v1.2",
+    version: "v1.3",
     short_title: "SAT"
 }
 
@@ -177,12 +177,13 @@ function initTransport(){
             })
             accounts.push({
                 id, 
-                login: master.accounts[id].account_name, 
+                login: master.accounts[id].nickname,//master.accounts[id].account_name, 
                 proxy: master.accounts[id].proxy.toString(), 
                 proxy_status: master.accounts[id].proxy.status, 
                 auto_conf: master.accounts[id].auto_confirm,
                 token_valid: !!master.accounts[id].refresh_token,
-                tags: master.accounts[id].tags
+                tags: master.accounts[id].tags,
+                nickname: master.accounts[id].nickname
             })
         }
         return res.json({accounts, tags})
@@ -199,3 +200,9 @@ function initTransport(){
     })
     transport.init();
 }
+
+
+
+// Проверка валидности рефреш токена после сброса пароля или обновления решреша в другом месте
+// Снятие шифрования по паролю
+// драг-дроп в группах

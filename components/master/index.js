@@ -92,12 +92,12 @@ class Master{
         });
 
         if (this.crypted_files.length && key){
-            const res = this._decrypt(this.crypted_files[0], key);
+            const res = this._decrypt(this.crypted_files[0].data, key);
             if (res.success){
                 this.crypto_key = key
                 this.crypted_files.forEach(item=>{
-                    const decrypt = this._decrypt(item)
-                    if (decrypt.success) this.init_account(decrypt.data, false);
+                    const decrypt = this._decrypt(item.data)
+                    if (decrypt.success) this.init_account(decrypt.data, false, item.filename);
                 })
                 this.crypted_files = []
                 return {success: true}
@@ -115,6 +115,15 @@ class Master{
     async enable_crypto({enable, password = ""}){
         if (!enable){
             if (this.crypto_enable){
+
+                const key = await new Promise(res => {
+                    scrypt(password, 'salt', 24, (err, key) => {
+                        if (err) return res(null)
+                        res(key)
+                    })
+                });
+                if (this.crypto_key && key.toString("base64") !== this.crypto_key.toString("base64")) return {success: false, error: "Wrong password"}
+
                 this.crypto_enable = false;
                 this.crypto_key = null;
                 for (let id in this.accounts){
@@ -137,10 +146,10 @@ class Master{
 
             if (!valid) return {success: false, error: `File ${id} is invalid!`, id}
 
-            if (!crypted) this.init_account(data);
+            if (!crypted) this.init_account(data, true, id);
             else{
                 this.crypto_enable = true;
-                this.crypted_files.push(data);
+                this.crypted_files.push({data, filename: id});
             }
             return {success: true, id}
         }catch(error){
@@ -148,9 +157,10 @@ class Master{
         }
     }
 
-    init_account(account,  isJson = true){
+    init_account(account,  isJson = true, filename = ""){
         const _account = isJson ? account : JSON.parse(account)
         this.accounts[_account.steamID] = new Account(_account);
+        this.accounts[_account.steamID].filename = filename;
         this.accounts[_account.steamID].on("update", ()=>{
             this.save_account(_account.steamID)
         })
@@ -166,7 +176,16 @@ class Master{
             const crypto_file = this.crypto_enable && this.crypto_key ? this._encrypt(data).data : "";
             const base64_file = crypto_file ? Buffer.from(crypto_file+".SteamAuthTool", "utf-8").toString("base64") : ""
             const file = base64_file ? base64_file : data;
-            const f_path = path.join(this.data_dir, id+".maFile")
+            let f_path = path.join(this.data_dir, this.accounts[id].filename);
+
+            const new_filename = this.accounts[id]._nickname ? `${this.accounts[id]._nickname}.maFile` : `${id}.maFile`;
+
+            if (this.accounts[id].filename != new_filename){
+                await fs.rm(f_path).catch(error=> console.log(error));
+                f_path = path.join(this.data_dir, new_filename);
+                this.accounts[id].filename = new_filename
+            }
+
             await fs.writeFile(f_path, file, {encoding: "utf-8"});
             return {success: true}
         }catch(error){
@@ -277,8 +296,14 @@ class Master{
 
     async load_confirmations(id){
         if (!this.accounts[id]) return {success: false, error: "Account not found"};
-        await this.accounts[id].update_session();
-        return this.accounts[id].load_confirmations();
+        console.log("update ses")
+        const session_updater = await this.accounts[id].update_session();
+        if (!session_updater.success) return session_updater
+        const result = await this.accounts[id].load_confirmations();
+        if (!result.success && result.error == "Not Logged In"){
+            this.accounts[id].access_token = null;
+            return this.load_confirmations(id)
+        }else return result
     }
 
     async respond_confirmations({id, items = [], accept = true}){
@@ -360,7 +385,8 @@ class Master{
             return {
                 auto_confirm: this.accounts[data.id].auto_confirm,
                 proxy: this.accounts[data.id].proxy.full,
-                tags: this.accounts[data.id].tags
+                tags: this.accounts[data.id].tags,
+                nickname: this.accounts[data.id].nickname
             }
         }else {
             return {
@@ -375,6 +401,7 @@ class Master{
         this.accounts[data.id].auto_confirm = data.auto_confirm;
         this.accounts[data.id].proxy = data.proxy;
         this.accounts[data.id].tags = data.tags;
+        if (data.nickname !== this.accounts[data.id].account_name) this.accounts[data.id].nickname = data.nickname
         this.save_account(data.id)
         return {success: true}
     }

@@ -41,6 +41,7 @@ module.exports = class Account extends Events{
     _auto_confirm = false;
     number = "";
     tags = [];
+    _nickname = "";
     isMaf = false;
 
     _session = null;
@@ -57,7 +58,9 @@ module.exports = class Account extends Events{
 
     confirmations = [];
 
-    __reneval_refresh_timeout = null
+    __reneval_refresh_timeout = null;
+
+    filename = "";
 
     constructor(obj, type = 0){
         super()
@@ -133,6 +136,12 @@ module.exports = class Account extends Events{
     }
 
     set refresh_token(val){
+        if (!val){
+            this._refresh_token.token = "";
+            this._refresh_token.exp = null;
+            return;
+        }
+
         if (!validateJwt(val)) return;
         const decode = decodeJwt(val);
         this._refresh_token.token = val;
@@ -146,6 +155,12 @@ module.exports = class Account extends Events{
     }
 
     set access_token(val){
+        if (!val){
+            this._access_token.token = "";
+            this._access_token.exp = null;
+            return;
+        }
+
         if (!validateJwt(val)) return;
         const decode = decodeJwt(val);
         this._access_token.token = val;
@@ -156,6 +171,14 @@ module.exports = class Account extends Events{
         if (!this._access_token.token) return "";
         const time = Date.now()/1000
         return this._access_token.exp - time > 10*60 ? this._access_token.token : "";
+    }
+
+    get nickname(){
+        return this._nickname || this.account_name
+    }
+
+    set nickname(val){
+        this._nickname = val;
     }
 
     _init_session(){
@@ -285,9 +308,18 @@ module.exports = class Account extends Events{
         if (this.cookies.length){
             const item = this.cookies.find(val=> val.includes("steamLoginSecure="));
             if (item){
-                const login_obj = decodeJwt(item.split("=")[1]);
+                const _access = item.split("=")[1].replace(`${this.steamID}%7C%7C`, "");
+                const login_obj = decodeJwt(_access);
                 const time = Math.floor(Date.now()/1000)
-                if (login_obj.exp - time > 10*60) return {success: true, cookies: this.cookies, updated: false};
+                if (login_obj.exp - time > 10*60){
+                    if (_access == this.access_token) return {success: true, cookies: this.cookies, updated: false};
+                    else {
+                        this.refresh_token = null;
+                        this.access_token = null;
+                        this.cookies = []
+                        return {success: false, error: "Session invalid"};
+                    }
+                } 
             }
         }
         
@@ -303,6 +335,12 @@ module.exports = class Account extends Events{
 
             return {success: true, cookies: this.cookies, updated: true}
         }catch(error){
+            console.log(error)
+            if (error.message == "AccessDenied"){
+                this.refresh_token = null;
+                this.access_token = null;
+                return {success: false, error: error.message}
+            }
             if (!repeat) return {success: false, error: error.message};
             return await this.get_cookies(repeat);
         }
@@ -321,6 +359,12 @@ module.exports = class Account extends Events{
             this.steamID = this._session.steamID.toString();
             this.emit("update");
         }catch(error){
+            console.log(error.message)
+            if (error.message == "AccessDenied"){
+                this.refresh_token = null;
+                this.access_token = null;
+                return {success: false, error: error.message}
+            }
             if (repeat) await this.refresh_access_token(repeat)
             else return {success: false, error: error.message}
         }
@@ -350,14 +394,16 @@ module.exports = class Account extends Events{
     }
 
     async update_session(){
-        const {updated} = await this.get_cookies();
-        if (updated) this.emit("update");
+        const result = await this.get_cookies();
+        if (result.updated) this.emit("update");
+        return result;
     }
 
     async qr_auth(url){
         if (!this.refresh_token || !this.two_fa.shared_secret || !url) return {success: false, error: "Can't approved"};
         if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
-        await this.refresh_access_token();
+        const updater = await this.refresh_access_token();
+        if (!updater.success) return updater
         const options = this.proxy.proxy ? {httpProxy: this.proxy.proxy} : {};
         const approver = new SteamSession.LoginApprover(this.access_token, this.two_fa.shared_secret, options);
 
@@ -365,6 +411,11 @@ module.exports = class Account extends Events{
             await approver.approveAuthSession({qrChallengeUrl: url, approve: true})
             return {success: true}
         }catch(error){
+            console.log("qr", error.message)
+            if (error.message == "WebAPI error 401"){
+                this.refresh_token = null;
+                this.access_token = null;
+            }
             return {success: false, error: error.message};
         }
     }
@@ -461,6 +512,7 @@ module.exports = class Account extends Events{
             number: this.number,
             proxy: this.proxy.full,
             tags: this.tags,
+            nickname: this._nickname,
             Session: {
                 SteamID: this.steamID
             }
