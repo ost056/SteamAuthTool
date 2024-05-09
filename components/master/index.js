@@ -243,6 +243,7 @@ class Master{
 
                 this.accounts[account.steamID] = account;
                 this.accounts[account.steamID].tags = tags;
+                this.accounts[account.steamID].filename = `${account.steamID}.maFile`
                 this.accounts[account.steamID].on("update", ()=>{
                     this.save_account(account.steamID)
                 })
@@ -328,6 +329,7 @@ class Master{
 
             this.accounts[steamID] = new Account(this.new_account.object4save());
             this.accounts[steamID].tags = data.tags;
+            this.accounts[steamID].filename = `${steamID}.maFile`;
             this.accounts[steamID].on("update", ()=>{
                 this.save_account(steamID)
             })
