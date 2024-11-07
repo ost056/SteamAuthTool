@@ -35,7 +35,7 @@ class Proxy{
     }
     get proxy(){
         if (!this.full) return "";
-        return this.full.href
+        return this.full.href.slice(0, -1)
     }
     get http_agent(){
         if (!this.full) return null;
@@ -76,7 +76,7 @@ async function check_proxy(_proxy){
     }catch(error){
         return false
     }
-    const agent = new HttpsProxyAgent({proxy: proxy.href, timeout: 5000});
+    const agent = new HttpsProxyAgent({proxy: proxy.href, timeout: 10000});
     try{
         await axios({
             url: "https://ya.ru/",

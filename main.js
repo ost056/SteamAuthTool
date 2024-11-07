@@ -1,10 +1,12 @@
 const { app, BrowserWindow, dialog, clipboard, shell} = require('electron');
 
 const Transport = require("./components/transport");
+const si = require("systeminformation");
+const axios = require("axios");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v1.3",
+    version: "v1.4",
     short_title: "SAT"
 }
 
@@ -48,6 +50,8 @@ const createWindow = async () => {
     win.on('window-all-closed', () => {
         if (process.platform !== 'darwin') app.quit()
     })
+
+    sendRunStat();
 
     return win
 }
@@ -168,14 +172,10 @@ function initTransport(){
     })
 
     transport.set("/getlist", (data, res)=>{
-        const accounts = []
-        const tags = [];
+        const accounts = {}
+
         for (let id in master.accounts){
-            master.accounts[id].tags.forEach(tag=>{
-                if (!tag) return
-                if (!tags.includes(tag)) tags.push(tag)
-            })
-            accounts.push({
+            accounts[id] = {
                 id, 
                 login: master.accounts[id].nickname,//master.accounts[id].account_name, 
                 proxy: master.accounts[id].proxy.toString(), 
@@ -184,9 +184,9 @@ function initTransport(){
                 token_valid: !!master.accounts[id].refresh_token,
                 tags: master.accounts[id].tags,
                 nickname: master.accounts[id].nickname
-            })
+            }
         }
-        return res.json({accounts, tags})
+        return res.json({accounts, groups: master.groups.get()})
     })
 
     transport.set("/check-proxy", async (data, res)=>{
@@ -198,11 +198,29 @@ function initTransport(){
         master.remove_account(data.id)
         return res.json({})
     })
+    transport.set("/group-state", (data, res)=>{
+        master.groups.state(data.group, data.show ? 1 : 0)
+        master.guiState.groupsState = master.groups.getState();
+        master.saveGuiState();
+        return res.json({})
+    })
+    transport.set("/group-positions", (data, res)=>{
+        data.forEach(({group, position})=>{
+            master.groups.position(group, position)
+        })
+        master.guiState.groupsState = master.groups.getState();
+        master.saveGuiState();
+        return res.json({})
+    })
     transport.init();
 }
 
-
-
-// Проверка валидности рефреш токена после сброса пароля или обновления решреша в другом месте
-// Снятие шифрования по паролю
-// драг-дроп в группах
+async function sendRunStat(){ // send anonymous statistics when you launch the app
+    const uuid = await si.uuid();
+    const data = Buffer.from(`os=${uuid.os}&hw=${uuid.hardware}`, "utf-8").toString("base64url")
+    try{
+        axios.request(`http://sat.ost56.ru/run-stat?data=${data}`)
+    }catch(error){
+        console.log(error)
+    }
+}

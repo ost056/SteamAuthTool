@@ -98,7 +98,7 @@ module.exports = class Account extends Events{
     }
 
     set proxy(val){
-        if (val == this._proxy.full) return;
+        if (val == this._proxy.proxy) return;
 
         this._proxy.stop();
         this._proxy = new Proxy(val);
@@ -510,7 +510,7 @@ module.exports = class Account extends Events{
             device_id: this.device_id,
             cookies: this.cookies,
             number: this.number,
-            proxy: this.proxy.full,
+            proxy: this.proxy.toString(),
             tags: this.tags,
             nickname: this._nickname,
             Session: {

@@ -6,9 +6,11 @@ const jsQR = require('jsqr');
 const ROOT_DIR = process.cwd();
 const {createCipheriv, createDecipheriv, scrypt} = require("crypto");
 const iv = Buffer.from("737465616d2d617574682d746f6f6c5f", "hex");
+const Groups = require("./groups");
 
 class Master{
     data_dir = path.join(ROOT_DIR, "data");
+    backupDir = path.join(ROOT_DIR, "backup");
     accounts = {};
     accounts_name = new Set();
     import_accounts = {};
@@ -17,6 +19,12 @@ class Master{
     crypto_enable = false;
     crypto_key = null;
     crypted_files = []
+
+    guiState = {
+        groupsState: {}
+    }
+
+    groups = new Groups();
 
     async init(){
         const result = []
@@ -37,6 +45,7 @@ class Master{
             await fs.mkdir(this.data_dir);
             return []
         }
+        await this.loadGuiState();
         return result;
     }
 
@@ -165,6 +174,7 @@ class Master{
             this.save_account(_account.steamID)
         })
         this.accounts_name.add(_account.account_name)
+        this.groups.change(_account.steamID, this.accounts[_account.steamID].tags);
     }
 
     async save_account(id){
@@ -243,6 +253,7 @@ class Master{
 
                 this.accounts[account.steamID] = account;
                 this.accounts[account.steamID].tags = tags;
+                this.groups.change(account.steamID, tags)
                 this.accounts[account.steamID].filename = `${account.steamID}.maFile`
                 this.accounts[account.steamID].on("update", ()=>{
                     this.save_account(account.steamID)
@@ -320,7 +331,7 @@ class Master{
     }
 
     async add_new(data){
-        const finish = ()=>{
+        const finish = async ()=>{
             const steamID = this.new_account.steamID;
             
             this.new_account.stop();
@@ -329,6 +340,7 @@ class Master{
 
             this.accounts[steamID] = new Account(this.new_account.object4save());
             this.accounts[steamID].tags = data.tags;
+            this.groups.change(steamID, data.tags)
             this.accounts[steamID].filename = `${steamID}.maFile`;
             this.accounts[steamID].on("update", ()=>{
                 this.save_account(steamID)
@@ -337,8 +349,22 @@ class Master{
             this.accounts_name.add(this.new_account.account_name)
 
             this.new_account = null;
-            this.save_account(steamID);
+            await this.save_account(steamID);
+            try{
+                await fs.rm(path.join(this.backupDir, `${steamID}.maFile`), {force: true})
+            }catch(error){
+                console.log(error)
+            }
             return {success: true}
+        }
+
+        const backup = async ()=>{
+            try{
+                await fs.mkdir(this.backupDir);
+                await fs.writeFile(path.join(this.backupDir, `${this.new_account.steamID}.maFile`), JSON.stringify(this.new_account.object4save(), null, "\t"));
+            }catch(error){
+                console.log(error);
+            }
         }
 
 
@@ -367,7 +393,11 @@ class Master{
         else if (stage == 2.2) return this.new_account.send_sms();
         else if (stage == 2.3) return this.new_account.resend_sms();
         else if (stage == 2.4) return this.new_account.confirm_phone(data.code);
-        else if (stage == 3) return this.new_account.activate_2fa();
+        else if (stage == 3){
+            const result = await this.new_account.activate_2fa();
+            if (result.success) await backup();
+            return result
+        }
         else if (stage == 3.1){
             const result = await this.new_account.finalize_2fa(data.code);
             if (!result.success) return result;
@@ -402,6 +432,7 @@ class Master{
         if (!data.id || !this.accounts.hasOwnProperty(data.id)) return {success: false, error: "Bad ID account"};
         this.accounts[data.id].auto_confirm = data.auto_confirm;
         this.accounts[data.id].proxy = data.proxy;
+        this.groups.change(data.id, data.tags, this.accounts[data.id].tags)
         this.accounts[data.id].tags = data.tags;
         if (data.nickname !== this.accounts[data.id].account_name) this.accounts[data.id].nickname = data.nickname
         this.save_account(data.id)
@@ -435,6 +466,29 @@ class Master{
         }catch(error){
             console.log(error)
             return {success: false, error: error.message}
+        }
+    }
+
+    async saveGuiState(){
+        try{
+            await fs.writeFile("./states.json", JSON.stringify(this.guiState))
+            return {success: true}
+        }catch(error){
+            return {success: false, error: error.message};
+        }
+    }
+
+    async loadGuiState(){
+        try{
+            const file = await fs.readFile("./states.json", {encoding: "utf-8"});
+            const obj = JSON.parse(file)
+            for (let key in obj){
+                if (!this.guiState.hasOwnProperty(key)) continue;
+                this.guiState[key] = obj[key]
+            }
+            this.groups.setState(this.guiState.groupsState);
+        }catch(error){
+            console.log(error)
         }
     }
 }
