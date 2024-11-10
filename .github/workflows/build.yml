@@ -1,0 +1,36 @@
+name: Build SAT Linux, Mac OS, Windows
+
+# Триггер, который позволяет вручную запускать процесс через интерфейс GitHub
+on:
+  workflow_dispatch:  # позволяет запускать сборку по команде
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.9.0'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build and package Electron app
+        run: npm run pack
+        env:
+          CI: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}-build
+          path: out/make
