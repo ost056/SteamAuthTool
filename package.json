@@ -35,13 +35,15 @@
   },
   "build": {
     "mac": {
-      "icon": "logo.ico"
+      "icon": "logo.ico",
+      "target": ["dmg", "zip"]
     },
     "win": {
       "icon": "logo.ico"
     },
     "linux": {
-      "icon": "logo.ico"
+      "icon": "logo.ico",
+      "target": ["AppImage", "deb"]
     }
   }
 }
