@@ -25,7 +25,7 @@ jobs:
         run: npm install
 
       - name: Build and package Electron app
-        run: npm run pack
+        run: npm run package
         env:
           CI: true
 
