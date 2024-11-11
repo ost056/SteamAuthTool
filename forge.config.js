@@ -26,13 +26,7 @@ module.exports = {
 		},
 		{
 			name: '@electron-forge/maker-zip',
-			platforms: ['win32'], // zip для macOS и Windows
-		},
-		{
-			name: '@electron-forge/maker-dmg', // Добавление DMG maker
-			config: {
-				format: 'ULFO', // Сжимаем для уменьшения размера
-			},
+			platforms: ['darwin', 'win32'], // zip для macOS и Windows
 		},
 		{
 			name: '@electron-forge/maker-deb',
