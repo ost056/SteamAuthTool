@@ -3,7 +3,7 @@ const ignore_list = ['app.js', "ui", ".vscode", ".gitignore", 'forge.config.js',
 
 module.exports = {
 	packagerConfig: {
-		asar: true,
+		asar: false,
 		name: "Steam Auth Tool",
 		icon: "logo",
 		ignore: (path)=>{
@@ -12,45 +12,15 @@ module.exports = {
 			}
 			return false
 		},
-		arch: process.platform === 'darwin' ? 'universal' : 'x64, arm64',
-    	platform: process.platform, // Платформа автоматически подставится
+		platform: ["darwin", "win32", "linux"]
 	},
-	rebuildConfig: {},
+	rebuildConfig: {
+		force: true
+	},
 	makers: [
 		{
-			name: '@electron-forge/maker-squirrel',
-			config: {
-				setupIcon: 'logo.ico', // Укажите путь к иконке для Windows
-			},
-			platforms: ['win32'],
-		},
-		{
 			name: '@electron-forge/maker-zip',
-			platforms: ['darwin', 'win32'], // zip для macOS и Windows
-		},
-		{
-			name: '@electron-forge/maker-deb',
-			config: {
-				options: {
-					icon: 'logo.png', // иконка для Linux
-				},
-			},
-			platforms: ['linux'],
-		},
-		{
-			name: '@electron-forge/maker-rpm',
-			config: {
-				options: {
-					icon: 'logo.png',
-				},
-			},
-			platforms: ['linux'],
-		},
-	],
-	plugins: [
-		{
-			name: '@electron-forge/plugin-auto-unpack-natives',
-			config: {},
-		},
+			platforms: ['darwin', 'win32', "linux"], // zip для macOS и Windows
+		}
 	],
 };

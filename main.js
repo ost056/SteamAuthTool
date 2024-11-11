@@ -36,7 +36,7 @@ const createWindow = async () => {
         resizable: false,
         fullscreenable: false,
         frame: false,
-        icon: path.join(__dirname,"logo.ico"),
+        icon: process.platform == "win32" ? path.join(__dirname, "logo.ico") : process.platform == "darwin" ? path.join(__dirname, "logo.icns") : path.join(__dirname, "logo.png"),
         show: false
     })
     win.once("ready-to-show", ()=>{
