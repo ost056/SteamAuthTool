@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        arch: [x64, arm64]  # Добавлены архитектуры для кросс-платформенной совместимости
+        arch: [x64, arm64]
 
     runs-on: ${{ matrix.os }}
 
@@ -29,18 +29,15 @@ jobs:
         env:
           CI: true
 
-      - name: Check output structure
+      - name: Rename and organize output ZIP files
         run: |
-            echo "Listing output files:"
-            ls -R out/make
-  
-      - name: Set executable permissions for .app
-        run: |
-            chmod -R 755 "out/make/Steam Auth Tool-darwin-${{ matrix.arch }}/Steam Auth Tool.app"
-
+          mkdir -p out/release
+          APP_ZIP=$(find out/make -name "*.zip" | head -n 1)
+          echo "Found ZIP at $APP_ZIP"
+          cp "$APP_ZIP" "out/release/Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/make
+          path: out/release/Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip
