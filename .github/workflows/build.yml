@@ -26,9 +26,27 @@ jobs:
         run: npm install
 
       - name: Package Steam Auth Tool app
-        run: npm run package
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            # macOS: Универсальная сборка (x64 + arm64)
+            npm run package -- --arch=universal
+          else
+            # Linux и Windows: Сборки для x64 и arm64
+            npm run package -- --arch=${{ matrix.arch }}
+          fi
         env:
           CI: true
+
+      - name: Rename and organize output files
+        run: |
+          mkdir -p out/release
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            mv out/Steam Auth Tool-darwin-${{ matrix.arch }} out/release/Steam_Auth_Tool_mac_${{ matrix.arch }}
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            mv out/Steam Auth Tool-linux-${{ matrix.arch }} out/release/Steam_Auth_Tool_linux_${{ matrix.arch }}
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            mv out/Steam Auth Tool-win32-${{ matrix.arch }} out/release/Steam_Auth_Tool_win_${{ matrix.arch }}
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
