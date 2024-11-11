@@ -25,22 +25,12 @@ jobs:
         run: npm install
 
       - name: Package Steam Auth Tool app
-        run: npm run make -- --arch=${{ matrix.arch }}
+        run: npm run package -- --arch=${{ matrix.arch }}
         env:
           CI: true
-
-      - name: Set permissions for .app and repackage
-        run: |
-          mkdir -p out/release
-          APP_ZIP=$(find out/make/zip -name "*.zip" | head -n 1)
-          echo "Found ZIP at $APP_ZIP"
-          # Разархивируем архив
-          unzip "$APP_ZIP" -d out/release
-          # Меняем права на .app
-          chmod -R 755 "out/release/Steam Auth Tool.app"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/release
+          path: out
