@@ -29,6 +29,16 @@ jobs:
         env:
           CI: true
 
+      - name: Check output structure
+        run: |
+            echo "Listing output files:"
+            ls -R out/make
+  
+      - name: Set executable permissions for .app
+        run: |
+            chmod -R 755 "out/make/Steam Auth Tool-darwin-${{ matrix.arch }}/Steam Auth Tool.app"
+
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
