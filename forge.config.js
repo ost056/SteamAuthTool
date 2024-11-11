@@ -5,31 +5,46 @@ module.exports = {
 	packagerConfig: {
 		asar: true,
 		name: "Steam Auth Tool",
-		icon: "logo.ico",
+		icon: "logo",
 		ignore: (path)=>{
 			for (let item of ignore_list){
 				if (path.startsWith(`/${item}`)) return true 
 			}
 			return false
-		}
+		},
+		arch: process.platform === 'darwin' ? 'universal' : 'x64, arm64',
+    	platform: process.platform, // Платформа автоматически подставится
 	},
 	rebuildConfig: {},
 	makers: [
 		{
 			name: '@electron-forge/maker-squirrel',
-			config: {},
+			config: {
+				setupIcon: 'logo.ico', // Укажите путь к иконке для Windows
+			},
+			platforms: ['win32'],
 		},
 		{
 			name: '@electron-forge/maker-zip',
-			platforms: ['darwin', "win"],
+			platforms: ['darwin', 'win32'], // zip для macOS и Windows
 		},
 		{
 			name: '@electron-forge/maker-deb',
-			config: {},
+			config: {
+				options: {
+					icon: 'logo.png', // иконка для Linux
+				},
+			},
+			platforms: ['linux'],
 		},
 		{
 			name: '@electron-forge/maker-rpm',
-			config: {},
+			config: {
+				options: {
+					icon: 'logo.png',
+				},
+			},
+			platforms: ['linux'],
 		},
 	],
 	plugins: [

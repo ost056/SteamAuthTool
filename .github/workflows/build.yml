@@ -1,15 +1,14 @@
 name: Build SAT Linux, Mac OS, Windows
 
-# Триггер, который позволяет вручную запускать процесс через интерфейс GitHub
 on:
-  workflow_dispatch:  # позволяет запускать сборку по команде
+  workflow_dispatch:
 
 jobs:
   build:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        arch: [x32, x64, arm64]
+        arch: [x64, arm64]  # Добавлены архитектуры для кросс-платформенной совместимости
 
     runs-on: ${{ matrix.os }}
 
@@ -28,11 +27,14 @@ jobs:
       - name: Package Steam Auth Tool app
         run: |
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            # macOS: Универсальная сборка (x64 + arm64)
-            npm run package -- --arch=universal
-          else
-            # Linux и Windows: Сборки для x64 и arm64
-            npm run package -- --arch=${{ matrix.arch }}
+            # Универсальная сборка для macOS
+            npm run package -- --platform=darwin --arch=universal
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            # Сборка для Linux
+            npm run package -- --platform=linux --arch=${{ matrix.arch }}
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Сборка для Windows
+            npm run package -- --platform=win32 --arch=${{ matrix.arch }}
           fi
         env:
           CI: true
@@ -41,10 +43,13 @@ jobs:
         run: |
           mkdir -p out/release
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            mv out/Steam Auth Tool-darwin-${{ matrix.arch }} out/release/Steam_Auth_Tool_mac_${{ matrix.arch }}
+            # Ренейм для macOS Universal Binary
+            mv out/Steam Auth Tool-darwin-universal out/release/Steam_Auth_Tool_mac_universal
           elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            # Ренейм для Linux (x64 и arm64)
             mv out/Steam Auth Tool-linux-${{ matrix.arch }} out/release/Steam_Auth_Tool_linux_${{ matrix.arch }}
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Ренейм для Windows (x64 и arm64)
             mv out/Steam Auth Tool-win32-${{ matrix.arch }} out/release/Steam_Auth_Tool_win_${{ matrix.arch }}
           fi
 
@@ -52,4 +57,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-build
-          path: out
+          path: out/release
