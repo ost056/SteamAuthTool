@@ -25,7 +25,7 @@ jobs:
         run: npm install
 
       - name: Package Steam Auth Tool app
-        run: npm run package -- --arch=${{ matrix.arch }}
+        run: npm run make -- --arch=${{ matrix.arch }}
         env:
           CI: true
 
