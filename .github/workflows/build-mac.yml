@@ -29,15 +29,18 @@ jobs:
         env:
           CI: true
 
-      - name: Rename and organize output ZIP files
+      - name: Extract .app from DMG and move to release folder
         run: |
           mkdir -p out/release
-          APP_ZIP=$(find out/make -name "*.zip" | head -n 1)
-          echo "Found ZIP at $APP_ZIP"
-          cp "$APP_ZIP" "out/release/Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip"
+          DMG_PATH=$(find out/make -name "*.dmg" | head -n 1)
+          echo "Found DMG at $DMG_PATH"
+          # Монтируем DMG и копируем .app в out/release
+          MOUNT_DIR=$(hdiutil attach "$DMG_PATH" | grep "/Volumes" | awk '{print $3}')
+          cp -R "$MOUNT_DIR/Steam Auth Tool.app" "out/release/Steam Auth Tool_${{ matrix.arch }}.app"
+          hdiutil detach "$MOUNT_DIR"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/release/Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip
+          path: out/release/Steam Auth Tool_${{ matrix.arch }}.app
