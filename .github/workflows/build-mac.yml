@@ -1,0 +1,36 @@
+name: Build SAT for macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest]
+        arch: [x64, arm64]  # Добавлены архитектуры для кросс-платформенной совместимости
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.9'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Package Steam Auth Tool app
+        run: npm run make -- --arch=${{ matrix.arch }}
+        env:
+          CI: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
+          path: out/make
