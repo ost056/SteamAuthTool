@@ -25,17 +25,7 @@ jobs:
         run: npm install
 
       - name: Package Steam Auth Tool app
-        run: |
-          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            # Универсальная сборка для macOS
-            npm run package -- --platform=darwin --arch=universal
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            # Сборка для Linux
-            npm run package -- --platform=linux --arch=${{ matrix.arch }}
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            # Сборка для Windows
-            npm run package -- --platform=win32 --arch=${{ matrix.arch }}
-          fi
+        run: npm run package -- --arch=${{ matrix.arch }}
         env:
           CI: true
 
