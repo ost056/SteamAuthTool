@@ -39,22 +39,8 @@ jobs:
         env:
           CI: true
 
-      - name: Rename and organize output files
-        run: |
-          mkdir -p out/release
-          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            # Ренейм для macOS Universal Binary
-            mv out/Steam Auth Tool-darwin-universal out/release/Steam_Auth_Tool_mac_universal
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            # Ренейм для Linux (x64 и arm64)
-            mv out/Steam Auth Tool-linux-${{ matrix.arch }} out/release/Steam_Auth_Tool_linux_${{ matrix.arch }}
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            # Ренейм для Windows (x64 и arm64)
-            mv out/Steam Auth Tool-win32-${{ matrix.arch }} out/release/Steam_Auth_Tool_win_${{ matrix.arch }}
-          fi
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-build
-          path: out/release
+          path: out
