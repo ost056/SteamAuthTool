@@ -38,12 +38,9 @@ jobs:
           unzip "$APP_ZIP" -d out/release
           # Меняем права на .app
           chmod -R 755 "out/release/Steam Auth Tool.app"
-          # Переупаковываем с максимальным уровнем сжатия
-          cd out/release
-          zip -r -9 "Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip" "Steam Auth Tool.app"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/release/Steam_Auth_Tool_macOS_${{ matrix.arch }}.zip
+          path: out/release
