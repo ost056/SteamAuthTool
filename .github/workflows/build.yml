@@ -9,6 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        arch: [x32, x64, arm64]
 
     runs-on: ${{ matrix.os }}
 
@@ -24,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and package Electron app
+      - name: Package Steam Auth Tool app
         run: npm run package
         env:
           CI: true
@@ -32,5 +33,5 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-build
+          name: ${{ matrix.os }}-${{ matrix.arch }}-build
           path: out
