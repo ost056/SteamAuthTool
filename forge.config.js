@@ -3,7 +3,7 @@ const ignore_list = ['app.js', "ui", ".vscode", ".gitignore", 'forge.config.js',
 
 module.exports = {
 	packagerConfig: {
-		asar: false,
+		asar: true,
 		name: "Steam Auth Tool",
 		icon: "logo",
 		ignore: (path)=>{
