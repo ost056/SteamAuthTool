@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        arch: [x64, arm64]
+        arch: [all]
 
     runs-on: ${{ matrix.os }}
 
@@ -33,5 +33,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/make/zip/**/**/*.zip
+          path: out/make/zip/*/*/*.zip
           compression-level: 0
