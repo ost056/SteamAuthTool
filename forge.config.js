@@ -13,7 +13,19 @@ module.exports = {
 			return false
 		},
 		platform: ["darwin", "win32", "linux"],
-		osxSign: true
+		osxSign: {
+			optionsForFile: (filePath) => {
+				// Here, we keep it simple and return a single entitlements.plist file.
+				// You can use this callback to map different sets of entitlements
+				// to specific files in your packaged app.
+				return {
+					hardenedRuntime: true,
+					entitlements: './darwin.plist', // создайте entitlements.plist для macOS
+					entitlementsInherit: './darwin.plist',
+					gatekeeperAssess: false,
+				 }
+			}
+		  }
 	},
 	rebuildConfig: {
 		force: true
