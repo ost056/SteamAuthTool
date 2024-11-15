@@ -25,13 +25,13 @@ jobs:
         run: npm install
 
       - name: Package Steam Auth Tool app
-        run: npm run make -- --arch=${{ matrix.arch }}
+        run: npm run dist
         env:
           CI: true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: out/make/zip/*/*/*.zip
-          compression-level: 0
+          name: Steam_Auth_Tool
+          path: dist
+          compression-level: 6
