@@ -4,3 +4,6 @@ node_modules
 data
 out
 states.json
+dist
+old_logo.ico
+logo_win.png

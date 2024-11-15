@@ -5,19 +5,11 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "dist": "electron-builder"
   },
   "author": "ost56",
   "license": "MIT",
   "devDependencies": {
-    "@electron-forge/cli": "^7.5.0",
-    "@electron-forge/maker-deb": "^7.5.0",
-    "@electron-forge/maker-rpm": "^7.5.0",
-    "@electron-forge/maker-squirrel": "^7.5.0",
-    "@electron-forge/maker-zip": "^7.5.0",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
-    "asar": "^3.2.0",
     "electron": "^25.9.8"
   },
   "dependencies": {
@@ -35,22 +27,43 @@
     "systeminformation": "^5.23.5"
   },
   "build": {
+    "appId": "com.ost56.steam-auth-tool",
+    "productName": "Steam Auth Tool",
+    "asar": true,
+    "files": [
+      "!app.js",
+      "!ui",
+      "!.vscode",
+      "!.gitignore",
+      "!forge.config.js",
+      "!vetur.config.js",
+      "!test.json",
+      "!shema.json",
+      "!data",
+      "!states.json",
+      "!backup",
+      "!node_modules/@electron",
+      "!node_modules/electron",
+      "!dist"
+    ],
+    "directories": {
+      "output": "dist"
+    },
     "mac": {
-      "icon": "logo.ico",
-      "target": [
-        "dmg",
-        "zip"
-      ]
+      "icon": "logo.icns",
+      "target": ["dir", "zip"]
     },
     "win": {
-      "icon": "logo.ico"
+      "icon": "logo.ico",
+      "target": ["dir", "zip"]
     },
     "linux": {
-      "icon": "logo.ico",
-      "target": [
-        "AppImage",
-        "deb"
-      ]
+      "icon": "logo.png",
+      "target": ["dir", "zip"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }
