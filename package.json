@@ -28,7 +28,6 @@
     "systeminformation": "^5.23.5"
   },
   "build": {
-    "appId": "com.ost56.steam-auth-tool",
     "productName": "Steam Auth Tool",
     "publish": null,
     "asar": true,
@@ -58,7 +57,10 @@
       "target": [
         "dir",
         "zip"
-      ]
+      ],
+      "gatekeeperAssess": true,
+      "notarize": false,
+      "type": "development"
     },
     "win": {
       "icon": "logo.ico",
