@@ -32,6 +32,7 @@
     "productName": "Steam Auth Tool",
     "publish": null,
     "asar": true,
+    "forceCodeSigning": false,
     "files": [
       "!app.js",
       "!ui",
@@ -53,6 +54,7 @@
     },
     "mac": {
       "icon": "logo.icns",
+      "identity": null,
       "target": [
         "dir",
         "zip"
