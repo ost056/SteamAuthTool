@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.ost56.steam-auth-tool",
     "productName": "Steam Auth Tool",
+    "publish": null,
     "asar": true,
     "files": [
       "!app.js",
