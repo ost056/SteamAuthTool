@@ -32,7 +32,7 @@ jobs:
       - name: Test Run
         run: |
           open dist/mac-${{ matrix.arch }}/Steam\ Auth\ Tool.app
-          sleep 5
+          sleep 10
           pkill -f "Steam Auth Tool"
         shell: bash
 

@@ -55,12 +55,10 @@
       "icon": "logo.icns",
       "identity": null,
       "target": [
-        "dir",
-        "zip"
+        "dir"
       ],
       "gatekeeperAssess": true,
-      "notarize": false,
-      "type": "development"
+      "notarize": false
     },
     "win": {
       "icon": "logo.ico",
