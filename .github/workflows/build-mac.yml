@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        arch: [x64, arm64]
+        arch: [arm64]
 
     runs-on: ${{ matrix.os }}
 
@@ -31,7 +31,7 @@ jobs:
 
       - name: Test Run
         run: |
-          open dist/mac${{ matrix.arch }}/Steam\ Auth\ Tool.app
+          open dist/mac-${{ matrix.arch }}/Steam\ Auth\ Tool.app
           sleep 5
           pkill -f "Steam Auth Tool"
         shell: bash
