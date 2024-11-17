@@ -29,6 +29,13 @@ jobs:
         env:
           CI: true
 
+      - name: Test Run
+        run: |
+          open dist/mac${{ matrix.arch }}/Steam\ Auth\ Tool.app
+          sleep 5
+          pkill -f "Steam Auth Tool"
+        shell: bash
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
