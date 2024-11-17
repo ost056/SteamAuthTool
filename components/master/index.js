@@ -4,7 +4,7 @@ const Proxy = require("./steam/proxy");
 const fs = require("fs").promises;
 const path = require("path");
 const jsQR = require('jsqr');
-const ROOT_DIR = process.cwd();//process.platform == "darwin" ? app.getPath("userData")  :process.cwd();
+const ROOT_DIR = process.platform == "darwin" ? app.getPath("userData")  :process.cwd();
 const {createCipheriv, createDecipheriv, scrypt} = require("crypto");
 const iv = Buffer.from("737465616d2d617574682d746f6f6c5f", "hex");
 const Groups = require("./groups");
