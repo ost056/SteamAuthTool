@@ -29,8 +29,32 @@ jobs:
         env:
           CI: true
 
+      - name: Set FILEPATH_VAR for x64, win
+        if: matrix.arch == 'x64' && matrix.os == 'windows-latest'
+        run: echo "FILEPATH_VAR=win-unpacked" >> $GITHUB_ENV
+  
+      - name: Set FILEPATH_VAR for arm64, win
+        if: matrix.arch == 'arm64' && matrix.os == 'windows-latest'
+        run: echo "FILEPATH_VAR=win-arm64-unpacked" >> $GITHUB_ENV
+
+      - name: Set FILEPATH_VAR for x64, linux
+        if: matrix.arch == 'x64' && matrix.os == 'ubuntu-latest'
+        run: echo "FILEPATH_VAR=linux-unpacked" >> $GITHUB_ENV
+  
+      - name: Set FILEPATH_VAR for arm64, linux
+        if: matrix.arch == 'arm64' && matrix.os == 'ubuntu-latest'
+        run: echo "FILEPATH_VAR=linux-arm64-unpacked" >> $GITHUB_ENV
+
+      - name: Set OS_VAR for win
+        if: matrix.os == 'windows-latest'
+        run: echo "OS_VAR=win" >> $GITHUB_ENV
+  
+      - name: Set OS_VAR for linux
+        if: matrix.os == 'ubuntu-latest'
+        run: echo "OS_VAR=linux" >> $GITHUB_ENV
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}-build
-          path: dist
+          name: Steam_Auth_Tool_${{ env.OS_VAR }}_${{ matrix.arch }}
+          path: dist/${{ env.FILEPATH_VAR }}
