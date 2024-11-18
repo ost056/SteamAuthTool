@@ -31,9 +31,9 @@ jobs:
       - name: Set FILEPATH_VAR
         run: |
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
-            echo "FILEPATH_VAR=linux" >> $GITHUB_ENV
+            echo "FILEPATH_VAR=linux-unpacked" >> $GITHUB_ENV
           else
-            echo "FILEPATH_VAR=linux-arm64" >> $GITHUB_ENV
+            echo "FILEPATH_VAR=linux-arm64-unpacked" >> $GITHUB_ENV
           fi
           
       - name: Read package.json
