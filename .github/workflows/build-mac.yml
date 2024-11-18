@@ -24,6 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Read version from package.json with fallback
+        uses: amochkin/action-json@v1
+        id: read_version
+        with:
+          property: version
+
       - name: Package Steam Auth Tool app
         run: npm run dist -- --${{ matrix.arch }}
         env:
@@ -45,6 +51,6 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Steam_Auth_Tool_${{ env.APP_VERSION }}_macOS_${{ matrix.arch }}
+          name: Steam_Auth_Tool_${{ steps.read_version.outputs.value }}_macOS_${{ matrix.arch }}
           path: dist/${{ env.FILEPATH_VAR }}
           compression-level: 6
