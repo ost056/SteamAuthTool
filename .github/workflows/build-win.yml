@@ -23,6 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Read version from package.json with fallback
+        uses: amochkin/action-json@v1
+        id: read_version
+        with:
+          property: version
+        
+      - name: Output read value of 'version' property
+        run: echo ${{ steps.read_version.outputs.value }}
+        shell: bash
+
       - name: Package Steam Auth Tool app
         run: npm run dist -- --${{ matrix.arch }}
         env:
@@ -35,16 +45,6 @@ jobs:
           else
             echo "FILEPATH_VAR=win-arm64-unpacked" >> $GITHUB_ENV
           fi
-        shell: bash
-
-      - name: Read version from package.json with fallback
-        uses: amochkin/action-json@v1
-        id: read_version
-        with:
-          property: version
-        
-      - name: Output read value of 'version' property
-        run: echo ${{ steps.read_version.outputs.value }}
         shell: bash
 
       - name: Upload build artifacts
