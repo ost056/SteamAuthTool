@@ -40,7 +40,7 @@ jobs:
       - name: Read package.json
         id: package-json
         run: |
-          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo 'APP_VERSION=$(node -p "require('./package.json').version")' >> $GITHUB_ENV
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
