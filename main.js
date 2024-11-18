@@ -97,7 +97,7 @@ function initTransport(){
     })
 
     transport.set("/import", async (data, res)=>{
-        const dir = await dialog.showOpenDialog({title: "Select account files", properties: ['multiSelections']}).catch();
+        const dir = await dialog.showOpenDialog({title: "Select account files", properties: ['multiSelections', 'openFile']}).catch();
         if (dir.filePaths.length){
             return res.json({path: dir.filePaths});
         } 

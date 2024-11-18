@@ -43,7 +43,7 @@ class Master{
                 result.push(res);
             }
         }catch(error){
-            await fs.mkdir(this.data_dir);
+            await fs.mkdir(this.data_dir, { recursive: true });
             return []
         }
         await this.loadGuiState();
@@ -361,7 +361,7 @@ class Master{
 
         const backup = async ()=>{
             try{
-                await fs.mkdir(this.backupDir);
+                await fs.mkdir(this.backupDir, { recursive: true });
                 await fs.writeFile(path.join(this.backupDir, `${this.new_account.steamID}.maFile`), JSON.stringify(this.new_account.object4save(), null, "\t"));
             }catch(error){
                 console.log(error);
