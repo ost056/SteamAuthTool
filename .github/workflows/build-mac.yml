@@ -29,9 +29,17 @@ jobs:
         env:
           CI: true
 
+      - name: Set FILEPATH_VAR for x64
+        if: matrix.arch == 'x64'
+        run: echo "FILEPATH_VAR=mac" >> $GITHUB_ENV
+  
+      - name: Set FILEPATH_VAR for arm64
+        if: matrix.arch == 'arm64'
+        run: echo "FILEPATH_VAR=mac-arm64" >> $GITHUB_ENV
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: dist
+          path: dist/$FILEPATH_VAR
           compression-level: 6
