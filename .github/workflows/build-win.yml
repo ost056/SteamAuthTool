@@ -38,13 +38,12 @@ jobs:
         shell: bash
 
       - name: Read package.json
-        id: package-json
-        run: |
-          echo 'APP_VERSION=$(node -p "require(`./package.json`).version")' >> $GITHUB_ENV
+        uses: dutscher/read-package-json-endpoint-actions@v1.33.7
+        id: package-json-endpoint
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Steam_Auth_Tool_${{ env.APP_VERSION }}_Windows_${{ matrix.arch }}
+          name: Steam_Auth_Tool_${{ steps.package-json-endpoint.outputs.version }}_Windows_${{ matrix.arch }}
           path: dist/${{ env.FILEPATH_VAR }}
           compression-level: 6
