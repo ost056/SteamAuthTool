@@ -1,4 +1,4 @@
-name: Build SAT for macOS
+name: Build SAT for Windows
 
 on:
   workflow_dispatch:
@@ -7,10 +7,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest]
-        arch: [arm64, x64]
+        arch: [x64, arm64]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
 
     steps:
       - name: Check out the repository
@@ -29,22 +28,22 @@ jobs:
         env:
           CI: true
 
+      - name: Set FILEPATH_VAR
+        run: |
+          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+            echo "FILEPATH_VAR=win" >> $GITHUB_ENV
+          else
+            echo "FILEPATH_VAR=win-arm64" >> $GITHUB_ENV
+          fi
+
       - name: Read package.json
         id: package-json
         run: |
           node read-package.js >> $GITHUB_ENV
 
-      - name: Set FILEPATH_VAR for x64
-        if: matrix.arch == 'x64'
-        run: echo "FILEPATH_VAR=mac" >> $GITHUB_ENV
-  
-      - name: Set FILEPATH_VAR for arm64
-        if: matrix.arch == 'arm64'
-        run: echo "FILEPATH_VAR=mac-arm64" >> $GITHUB_ENV
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Steam_Auth_Tool_${{ env.APP_VERSION }}_macOS_${{ matrix.arch }}
+          name: Steam_Auth_Tool_${{ env.APP_VERSION }}_Windows_${{ matrix.arch }}
           path: dist/${{ env.FILEPATH_VAR }}
           compression-level: 6

@@ -46,7 +46,8 @@
       "!backup",
       "!node_modules/@electron",
       "!node_modules/electron",
-      "!dist"
+      "!dist",
+      "!read-package.js"
     ],
     "directories": {
       "output": "dist"
@@ -63,15 +64,13 @@
     "win": {
       "icon": "logo.ico",
       "target": [
-        "dir",
-        "zip"
+        "dir"
       ]
     },
     "linux": {
       "icon": "logo.png",
       "target": [
-        "dir",
-        "zip"
+        "dir"
       ]
     },
     "nsis": {
