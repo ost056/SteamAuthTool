@@ -33,5 +33,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
-          path: dist/mac-${{ matrix.arch }}
+          path: dist
           compression-level: 6
