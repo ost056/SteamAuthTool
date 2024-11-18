@@ -9,8 +9,8 @@ A desktop application that replicates the functionality of the Steam mobile appl
 
 # Donate
 
-USDT (TRC-20): THQEvstZijZ8QSmMR7CSfc6A83UrGSqoJX
-USDT (BEP-20): 0x73ec65f56035701bb302e22548678693ce10b618
+- USDT (TRC-20): THQEvstZijZ8QSmMR7CSfc6A83UrGSqoJX
+- USDT (BEP-20): 0x73ec65f56035701bb302e22548678693ce10b618
 
 # Main functions
 
