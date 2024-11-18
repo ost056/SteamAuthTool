@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        arch: [arm64]
+        arch: [arm64, x64]
 
     runs-on: ${{ matrix.os }}
 
@@ -29,16 +29,9 @@ jobs:
         env:
           CI: true
 
-      - name: Test Run
-        run: |
-          open dist/mac-${{ matrix.arch }}/Steam\ Auth\ Tool.app
-          sleep 10
-          pkill -f "Steam Auth Tool"
-        shell: bash
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Steam_Auth_Tool_macOS_${{ matrix.arch }}
           path: dist/mac-${{ matrix.arch }}
-          compression-level: 9
+          compression-level: 6
