@@ -35,6 +35,7 @@ jobs:
           else
             echo "FILEPATH_VAR=win-arm64" >> $GITHUB_ENV
           fi
+        shell: bash
 
       - name: Read package.json
         id: package-json
