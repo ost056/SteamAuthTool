@@ -37,9 +37,15 @@ jobs:
           fi
         shell: bash
 
-      - name: Read package.json
-        uses: dutscher/read-package-json-endpoint-actions@v1.33.7
-        id: package-json-endpoint
+      - name: Read version from package.json with fallback
+        uses: amochkin/action-json@v1
+        id: read_version
+        with:
+          property: version
+        
+      - name: Output read value of 'version' property
+        run: echo ${{ steps.read_version.outputs.value }}
+        shell: bash
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
