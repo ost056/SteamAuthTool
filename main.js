@@ -6,7 +6,7 @@ const axios = require("axios");
 
 const APP_INFO = {
     title: "Steam Auth Tool",
-    version: "v1.4",
+    version: "v1.5",
     short_title: "SAT"
 }
 

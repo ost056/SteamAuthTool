@@ -96,7 +96,7 @@ Account.prototype.load_confirmation_info = function(id){
     }
 }
 
-Account.prototype.respond_confirmations = function(ids, action = true){
+Account.prototype.respond_confirmations = async function(ids, action = true){
     const id = []
     const keys = [];
     if (typeof ids == "string"){
@@ -113,20 +113,34 @@ Account.prototype.respond_confirmations = function(ids, action = true){
         })
     }
 
+    if (!id.length) return {success: true}
+    if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
+
+    const results = [];
+    
+    for (let i=0; i<id.length; i++){
+        const result = await this._respond_confirmation(id[i], keys[i], action)
+        results.push(result);
+        if (i < id.length -1) await new Promise(res=> setTimeout(res, 300))
+    }
+
+    return results;
+}
+
+Account.prototype._respond_confirmation = function(id, Ckey, action){
     const time = Math.floor(Date.now()/1000);
     const tag = action ? "accept" : "reject";
     const key = SteamTotp.getConfirmationKey(this.two_fa.identity_secret, time, tag);
-    if (!id.length) return {success: true}
-    if (!this.proxy.status) return {success: false, error: "Proxy is broken"}
+
     return new Promise(res=>{
-        this.community.respondToConfirmation(id, keys, time, {key, tag}, action, error=>{
+        this.community.respondToConfirmation(id, Ckey, time, {tag, key}, action, error=>{
             if (error){
                 console.log("respond", error)
-                res({success: false, error: error.message})
+                res({id, success: false, error: error.message})
             } 
             else{
-                this.confirmations = this.confirmations.filter(val=> !ids.includes(val.id));
-                res({success: true})
+                this.confirmations = this.confirmations.filter(val=> val.id != id);
+                res({id, success: true})
             } 
         })
     })

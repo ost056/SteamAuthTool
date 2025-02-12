@@ -322,8 +322,7 @@ class Master{
     async respond_confirmations({id, items = [], accept = true}){
         if (!this.accounts[id]) return {success: false, error: "Account not found"}
         const result = await this.accounts[id].respond_confirmations(items, accept);
-        if (!result.success) return result;
-        else return {success: true, confirmations: this.accounts[id].confirmations}
+        return {confirmations: this.accounts[id].confirmations, data: result};
     }
 
     confirmation_info({id, confirmation_id}){
