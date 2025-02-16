@@ -23,7 +23,7 @@
     "request": "^2.88.2",
     "steam-session": "^1.7.1",
     "steam-totp": "^2.1.2",
-    "steamcommunity": "^3.46.1",
+    "steamcommunity": "^3.48.6",
     "steamstore": "^2.3.0",
     "systeminformation": "^5.23.5"
   },
