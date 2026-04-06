@@ -1,6 +1,6 @@
 {
   "name": "steam-auth-tool",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Steam Auth Tool",
   "main": "main.js",
   "scripts": {
@@ -23,7 +23,7 @@
     "request": "^2.88.2",
     "steam-session": "^1.7.1",
     "steam-totp": "^2.1.2",
-    "steamcommunity": "^3.48.6",
+    "steamcommunity": "^3.49.0",
     "steamstore": "^2.3.0",
     "systeminformation": "^5.23.5"
   },

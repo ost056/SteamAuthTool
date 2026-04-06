@@ -4,13 +4,14 @@ const Proxy = require("./steam/proxy");
 const fs = require("fs").promises;
 const path = require("path");
 const jsQR = require('jsqr');
-const ROOT_DIR = process.platform == "darwin" ? path.join(app.getPath("documents"), "Steam Auth Tool")  :process.cwd();
+const ROOT_DIR = process.platform == "darwin" ? path.join(app.getPath("documents"), "Steam Auth Tool")  : process.cwd();
 const {createCipheriv, createDecipheriv, scrypt} = require("crypto");
 const iv = Buffer.from("737465616d2d617574682d746f6f6c5f", "hex");
 const Groups = require("./groups");
 
 class Master{
     data_dir = path.join(ROOT_DIR, "data");
+    storage_dir = path.join(ROOT_DIR, "storage");
     backupDir = path.join(ROOT_DIR, "backup");
     accounts = {};
     accounts_name = new Set();
@@ -28,6 +29,7 @@ class Master{
     groups = new Groups();
 
     async init(){
+        await fs.mkdir(this.storage_dir, { recursive: true });
         const result = []
         try{
             const dir = await fs.readdir(this.data_dir, {encoding: "utf-8"})
@@ -68,14 +70,13 @@ class Master{
     }
 
     _encrypt(data){
-        if (!this.crypto_key) return {success: false, error: "Empty password"}
         try{
             const cipher = createCipheriv('aes-192-cbc', this.crypto_key, iv);
             let encrypted = cipher.update(data, 'utf-8', 'hex');
             encrypted += cipher.final('hex');
-            return {success: true, data: encrypted};
+            return encrypted;
         }catch(error){
-            return {success: false, error: error.message, data: ""}
+            return ""
         }
     }
 
@@ -105,18 +106,19 @@ class Master{
             const res = this._decrypt(this.crypted_files[0].data, key);
             if (res.success){
                 this.crypto_key = key
-                this.crypted_files.forEach(item=>{
+                for (let item of this.crypted_files){
                     const decrypt = this._decrypt(item.data)
-                    if (decrypt.success) this.init_account(decrypt.data, false, item.filename);
-                })
+                    if (decrypt.success) await this.init_account(decrypt.data, false, item.filename);
+                }
                 this.crypted_files = []
+                await this.loadGuiState();
                 return {success: true}
             }else return {success: false, error: "Wrong password"}
         }else if (key){
             this.crypto_enable = true;
             this.crypto_key = key;
             for (let id in this.accounts){
-                this.save_account(id)
+                this.save_account(id, true)
             }
             return {success: true}
         }else return {success: false, error: "Failed to set password. Try another one"}
@@ -137,7 +139,7 @@ class Master{
                 this.crypto_enable = false;
                 this.crypto_key = null;
                 for (let id in this.accounts){
-                    await this.save_account(id)
+                    await this.save_account(id, true)
                 }
             }
             return {success: true}
@@ -149,42 +151,68 @@ class Master{
         return this.set_crypto_password(password);
     }
 
-    async load_account(id){
+    async load_account(filename){
         try{
-            const file = await fs.readFile(path.join(this.data_dir, id), {encoding: "utf-8"});
+            const file = await fs.readFile(path.join(this.data_dir, filename), {encoding: "utf-8"});
             const {valid, crypted, data} = this.file_is_crypted(file)
 
-            if (!valid) return {success: false, error: `File ${id} is invalid!`, id}
+            if (!valid) return {success: false, error: `File ${filename} is invalid!`, id: filename}
 
-            if (!crypted) this.init_account(data, true, id);
+            if (!crypted) await this.init_account(data, true, filename);
             else{
                 this.crypto_enable = true;
-                this.crypted_files.push({data, filename: id});
+                this.crypted_files.push({data, filename});
             }
-            return {success: true, id}
+            return {success: true, id: filename}
         }catch(error){
-            return {success: false, error: error.message, id}
+            return {success: false, error: error.message, id: filename}
         }
     }
 
-    init_account(account,  isJson = true, filename = ""){
-        const _account = isJson ? account : JSON.parse(account)
-        this.accounts[_account.steamID] = new Account(_account);
-        this.accounts[_account.steamID].filename = filename;
-        this.accounts[_account.steamID].on("update", ()=>{
-            this.save_account(_account.steamID)
+    async init_account(account,  isJson = true, filename = ""){
+        const _account = isJson ? account : JSON.parse(account);
+
+        if (!_account.account_name) return;
+
+        const steamID = _account.steamID ?? _account.account_name;
+
+        const storage_file = await fs.readFile(path.join(this.storage_dir, Buffer.from(_account.account_name, "utf-8").toString("hex")), {encoding: "utf-8"}).catch(err=> {});
+        if (storage_file){
+            let storage_data = storage_file;
+
+            const {crypted, valid, data} = this.file_is_crypted(storage_file);
+            
+            if (valid && crypted){
+                const decrypt = this._decrypt(data);
+                if (decrypt.success) storage_data = decrypt.data;
+            }
+
+            try{
+                const json_data = Buffer.from(storage_data, "base64").toString("utf-8")
+                const account_data = JSON.parse(json_data);
+                this.accounts[steamID] = new Account(_account, 0, account_data);
+            }catch(err){
+                console.log("storage json")
+            }
+        }else console.log(steamID, "Storage not found")
+
+        if (!this.accounts.hasOwnProperty(steamID)) this.accounts[steamID] = new Account(_account);
+
+        this.accounts[steamID].filename = filename;
+        this.accounts[steamID].on("update", ()=>{
+            this.save_account(steamID)
         })
         this.accounts_name.add(_account.account_name)
-        this.groups.change(_account.steamID, this.accounts[_account.steamID].tags);
+        this.groups.change(steamID, this.accounts[steamID].tags);
     }
 
-    async save_account(id){
+    async save_account_v1(id){
         if (!this.accounts[id]) return {success: false, error: "Account not found"}
 
         const obj = this.accounts[id].object4save()
         const data = JSON.stringify(obj, null, "\t");
         try{
-            const crypto_file = this.crypto_enable && this.crypto_key ? this._encrypt(data).data : "";
+            const crypto_file = this.crypto_enable && this.crypto_key ? this._encrypt(data) : "";
             const base64_file = crypto_file ? Buffer.from(crypto_file+".SteamAuthTool", "utf-8").toString("base64") : ""
             const file = base64_file ? base64_file : data;
             let f_path = path.join(this.data_dir, this.accounts[id].filename);
@@ -198,6 +226,45 @@ class Master{
             }
 
             await fs.writeFile(f_path, file, {encoding: "utf-8"});
+            return {success: true}
+        }catch(error){
+            console.log(error)
+            return {success: false, error: error.message}
+        }
+    }
+
+    async save_account(id, force = false){
+        if (!this.accounts[id]) return {success: false, error: "Account not found"}
+
+        if (force){
+            const mafile = JSON.stringify(this.accounts[id].mafile(), null, "\t");
+            let f_path = path.join(this.data_dir, this.accounts[id].filename);
+
+            const new_filename = (this.accounts[id]._nickname ? this.accounts[id]._nickname : this.accounts[id].steamID)+".maFile";
+
+            if (this.accounts[id].filename != new_filename){
+                await fs.rm(f_path).catch(error=> console.log(error));
+                f_path = path.join(this.data_dir, new_filename);
+                this.accounts[id].filename = new_filename
+            }
+
+            await this._save_file(f_path, mafile);
+        }
+
+        const acc_data = JSON.stringify(this.accounts[id].storage_data(), null, "\t");
+        const data = Buffer.from(acc_data, "utf-8").toString("base64");
+        const file_name = Buffer.from(this.accounts[id].account_name, "utf-8").toString("hex");
+        const f_path = path.join(this.storage_dir, file_name);
+        await this._save_file(f_path, data);
+    }
+
+    async _save_file(path, data = ""){
+        try{
+            const crypto_file = this.crypto_enable && this.crypto_key ? this._encrypt(data) : "";
+            const base64_file = crypto_file ? Buffer.from(crypto_file+".SteamAuthTool", "utf-8").toString("base64") : ""
+            const file = base64_file ? base64_file : data;
+
+            await fs.writeFile(path, file, {encoding: "utf-8"});
             return {success: true}
         }catch(error){
             console.log(error)
@@ -260,7 +327,7 @@ class Master{
                     this.save_account(account.steamID)
                 })
                 this.accounts_name.add(account.account_name)
-                this.save_account(account.steamID)
+                this.save_account(account.steamID, true)
                 return result;
             }else return {success: false, error: "Guard disconnected"}
         }else return result;
@@ -349,7 +416,7 @@ class Master{
             this.accounts_name.add(this.new_account.account_name)
 
             this.new_account = null;
-            await this.save_account(steamID);
+            await this.save_account(steamID, true);
             try{
                 await fs.rm(path.join(this.backupDir, `${steamID}.maFile`), {force: true})
             }catch(error){

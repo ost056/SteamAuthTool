@@ -19,6 +19,7 @@ module.exports = class Account extends Events{
 		"revocation_code": "",
 		"uri": "",
 		"server_time": "",
+        "account_name": "",
 		"token_gid": "",
 		"identity_secret": "",
 		"secret_1": "",
@@ -62,13 +63,14 @@ module.exports = class Account extends Events{
 
     filename = "";
 
-    constructor(obj, type = 0){
+    constructor(obj, type = 0, storage = null){
         super()
         this.proxy = obj?.proxy ?? null;
 
         if (type == 0){
             if (obj.hasOwnProperty("Session")) this.isMaf = true;
             for (let key in obj){
+                if (key == "account_name") this.account_name = obj[key];
                 if (key == '2fa' || this.two_fa.hasOwnProperty(key) || key == "Session") continue;
                 if (obj[key]) this[key] = obj[key];
             }
@@ -90,6 +92,12 @@ module.exports = class Account extends Events{
         if (type == 2){
             this.account_name = obj.login;
             this.proxy = obj.proxy || null;
+        }
+
+        if (storage && typeof storage == "object"){
+            for (let key in storage){
+                if (storage[key]) this[key] = storage[key];
+            }
         }
     }
 
@@ -516,6 +524,31 @@ module.exports = class Account extends Events{
             Session: {
                 SteamID: this.steamID
             }
+        }
+    }
+
+    mafile(){
+        return {
+            ...this.two_fa,
+            Session: {
+                SteamID: this.steamID
+            }
+        };
+    }
+
+    storage_data(){
+        return {
+            steamID: this.steamID,
+            account_name: this.account_name,
+            access_token: this.access_token,
+            auto_confirm: this.auto_confirm,
+            refresh_token: this.refresh_token,
+            device_id: this.device_id,
+            cookies: this.cookies,
+            number: this.number,
+            proxy: this.proxy.toString(),
+            tags: this.tags,
+            nickname: this._nickname
         }
     }
 

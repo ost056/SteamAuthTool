@@ -2,6 +2,7 @@ ui
 node_modules
 .vscode
 data
+storage
 out
 states.json
 dist
