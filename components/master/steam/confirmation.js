@@ -118,11 +118,29 @@ Account.prototype.respond_confirmations = async function(ids, action = true){
 
     const results = [];
     
-    for (let i=0; i<id.length; i++){
-        const result = await this._respond_confirmation(id[i], keys[i], action)
-        results.push(result);
-        if (i < id.length -1) await new Promise(res=> setTimeout(res, 300))
-    }
+    // for (let i=0; i<id.length; i++){
+    //     const result = await this._respond_confirmation(id[i], keys[i], action)
+    //     results.push(result);
+    //     if (i < id.length -1) await new Promise(res=> setTimeout(res, 300))
+    // }
+
+    const time = Math.floor(Date.now()/1000);
+    const tag = action ? "accept" : "reject";
+    const key = SteamTotp.getConfirmationKey(this.two_fa.identity_secret, time, tag);
+
+    await new Promise(res=>{
+        this.community.respondToConfirmation(id, keys, time, {tag, key}, action, error=>{
+            for (let i of id){
+                if (error) results.push({id: i, success: false, error: error.message})
+                else results.push({id: i, success: true})
+            }
+
+            if (error) console.log("respond", error);
+            else this.confirmations = this.confirmations.filter(val=> !id.includes(val.id));
+
+            res();
+        })
+    })
 
     return results;
 }
