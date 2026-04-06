@@ -1,6 +1,9 @@
 const axios = require("axios");
 const {HttpProxyAgent, HttpsProxyAgent} = require("hpagent");
 
+const CHECKER_URL = get_checker_url();
+console.log(CHECKER_URL);
+
 class Proxy{
     status = true;
     _full = null
@@ -79,7 +82,7 @@ async function check_proxy(_proxy){
     const agent = new HttpsProxyAgent({proxy: proxy.href, timeout: 10000});
     try{
         await axios({
-            url: "https://ya.ru/",
+            url: CHECKER_URL,
             httpsAgent: agent
         })
         return true;
@@ -90,6 +93,18 @@ async function check_proxy(_proxy){
             return await check_proxy(proxy)
         }
     }
+}
+
+function get_checker_url(){
+    let result = "https://ya.ru/";
+
+    try{
+        const file = require("fs").readFileSync("./proxy-checker.txt", {encoding: "utf-8"});
+        const url = new URL(file);
+        result = url.href;
+    }catch(err){}
+    
+    return result;
 }
 
 module.exports = Proxy;
