@@ -9,7 +9,7 @@ const Protobuf = require("./proto");
 
 const EResult = SteamSession.EResult;
 
-const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+const USER_AGENT = "okhttp/4.9.2"
 
 module.exports = class Account extends Events{
     _proxy = new Proxy();
@@ -322,6 +322,7 @@ module.exports = class Account extends Events{
                 if (login_obj.exp - time > 10*60){
                     if (_access == this.access_token) return {success: true, cookies: this.cookies, updated: false};
                     else {
+                        console.log(_access, this.access_token)
                         this.refresh_token = null;
                         this.access_token = null;
                         this.cookies = []
