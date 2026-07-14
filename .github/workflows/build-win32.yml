@@ -32,7 +32,7 @@ jobs:
 
       - name: Set FILEPATH_VAR
         run: |
-          echo "FILEPATH_VAR=win-unpacked" >> $GITHUB_ENV
+          echo "FILEPATH_VAR=win-ia32-unpacked" >> $GITHUB_ENV
         shell: bash
 
       - name: Upload build artifacts
