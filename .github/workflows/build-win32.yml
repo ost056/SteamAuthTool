@@ -1,0 +1,43 @@
+name: Build SAT for Windows32
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.9'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Read version from package.json with fallback
+        uses: amochkin/action-json@v1
+        id: read_version
+        with:
+          property: version
+
+      - name: Package Steam Auth Tool app
+        run: npm run dist -- --ia32
+        env:
+          CI: true
+
+      - name: Set FILEPATH_VAR
+        run: |
+          echo "FILEPATH_VAR=win-unpacked" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Steam_Auth_Tool_${{ steps.read_version.outputs.value }}_Windows_x86
+          path: dist/${{ env.FILEPATH_VAR }}
+          compression-level: 6
